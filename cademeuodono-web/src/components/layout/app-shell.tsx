@@ -19,6 +19,7 @@ import {
   Star,
   Home as HomeIcon,
   ClipboardList,
+  Activity,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -43,6 +44,7 @@ const communityItems = [
 
 const accountItems = [
   { href: '/tags', icon: Tag, label: 'Smart Tags' },
+  { href: '/activities', icon: Activity, label: 'Minhas atividades' },
   { href: '/profile', icon: User, label: 'Meu Perfil' },
 ]
 
@@ -102,10 +104,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* User + Logout */}
       <div className="border-t border-gray-100 p-3">
         <div className="flex items-center gap-3 px-2 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-brand-700">
-              {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
-            </span>
+          <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0 overflow-hidden">
+            {user?.avatarUrl ? (
+              <Image src={user.avatarUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
+            ) : (
+              <span className="text-xs font-bold text-brand-700">
+                {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
+              </span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>

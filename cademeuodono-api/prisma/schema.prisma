@@ -121,6 +121,10 @@ model User {
   state          String?
   address        String?
   neighborhood   String?
+  block          String?
+  lotNumber      String?  @map("lot_number")
+  streetNumber   String?  @map("street_number")
+  complement     String?
   postalCode     String?  @map("postal_code")
   role           Role     @default(USER)
   isActive       Boolean  @default(true) @map("is_active")
@@ -131,8 +135,30 @@ model User {
   announcements    Announcement[]
   fosterVolunteer  FosterVolunteer?
   adoptions        Adoption[]
+  activities       ActivityLog[]
 
   @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOG DE ATIVIDADES DO USUÁRIO
+// ─────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String
+  description String
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  metadata    Json?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("activity_logs")
 }
 
 // ─────────────────────────────────────────────────────────────

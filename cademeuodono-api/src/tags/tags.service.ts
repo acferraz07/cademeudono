@@ -196,7 +196,7 @@ export class TagsService {
       throw new ForbiddenException('Este pet não pertence à sua conta')
     }
 
-    return this.prisma.smartTag.update({
+    const activated = await this.prisma.smartTag.update({
       where: { code: dto.code },
       data: {
         status: TagStatus.ACTIVE,
@@ -208,6 +208,12 @@ export class TagsService {
         pet: { select: { id: true, name: true } },
       },
     })
+
+    void this.prisma.activityLog.create({
+      data: { userId, type: 'TAG_ACTIVATED', description: `CMD Smart Tag ativada: ${dto.code}`, entityType: 'smartTag', entityId: dto.code },
+    }).catch(() => {})
+
+    return activated
   }
 
   async getMyTag(code: string, userId: string) {

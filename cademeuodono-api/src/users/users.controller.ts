@@ -6,10 +6,19 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { memoryStorage } from 'multer'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
@@ -36,6 +45,24 @@ export class UsersController {
     return this.usersService.updateMe(user.id, dto)
   }
 
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiOperation({ summary: 'Upload de foto de perfil (retorna avatarUrl pública)' })
+  @ApiResponse({ status: 201, description: 'URL do avatar retornada' })
+  uploadAvatar(
+    @CurrentUser() user: User,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.usersService.uploadAvatar(user.id, file.buffer, file.mimetype, file.originalname)
+  }
+
   @Delete('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Desativa a conta do usuário autenticado' })
@@ -54,5 +81,16 @@ export class UsersController {
   @ApiOperation({ summary: 'Lista todos os anúncios do usuário autenticado' })
   getMyAnnouncements(@CurrentUser() user: User) {
     return this.usersService.getMyAnnouncements(user.id)
+  }
+
+  @Get('me/activities')
+  @ApiOperation({ summary: 'Lista as atividades recentes do usuário autenticado' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
+  getMyActivities(
+    @CurrentUser() user: User,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50
+    return this.usersService.getMyActivities(user.id, parsedLimit)
   }
 }

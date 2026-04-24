@@ -14,11 +14,16 @@ import { Input, Select } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import type { Pet } from '@/types'
 
+const CODE_REGEX = /^CMD-(ST|GPS)-\d{6}-\d{6}-[A-Z0-9]{4}$/
+
 const schema = z.object({
   code: z
     .string()
     .min(3, 'Código inválido')
-    .transform((v) => v.toUpperCase().trim()),
+    .transform((v) => v.toUpperCase().trim())
+    .refine((v) => CODE_REGEX.test(v), {
+      message: 'Formato inválido. Esperado: CMD-ST-202604-000001-X7K9',
+    }),
   petId: z.string().min(1, 'Selecione um pet'),
 })
 
@@ -94,8 +99,13 @@ export default function ActivateTagPage() {
           <div>
             <p className="font-medium text-gray-900 text-sm">Onde encontro o código?</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              O código está impresso na embalagem da tag e também gravado no verso do chaveiro/plaquinha.
-              Ele tem o formato <span className="font-mono font-semibold">CMD-XXXXXX</span>.
+              O código de ativação vem impresso em um card dentro da embalagem, junto com a sua{' '}
+              <span className="font-semibold text-gray-700">CMD Smart Tag (NFC + QR)</span>. Guarde
+              esse card com cuidado. Esse código é usado para vincular a Smart Tag ao perfil do pet no
+              sistema.
+            </p>
+            <p className="text-xs text-gray-400 mt-1.5">
+              Formato: <span className="font-mono font-semibold text-gray-600">CMD-ST-202604-000001-X7K9</span>
             </p>
           </div>
         </div>
@@ -107,10 +117,11 @@ export default function ActivateTagPage() {
 
           <div className="space-y-4">
             <Input
-              label="Código da tag"
-              placeholder="CMD-XXXXXX"
+              label="Código de ativação"
+              placeholder="CMD-ST-202604-000001-X7K9"
               required
               error={errors.code?.message}
+              hint="Código impresso no card dentro da embalagem"
               {...register('code')}
             />
 

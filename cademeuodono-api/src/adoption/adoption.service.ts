@@ -59,8 +59,11 @@ export class AdoptionService {
       },
     })
 
-    // Gerar PDF de forma assíncrona e não bloqueante
     void this.generateAndUploadPdf(adoption.id, dto, pet, cpfMasked, ipAddress)
+
+    void this.prisma.activityLog.create({
+      data: { userId, type: 'ADOPTION_REQUEST', description: `Solicitação de adoção enviada para o pet "${pet.name}"`, entityType: 'adoption', entityId: adoption.id },
+    }).catch(() => {})
 
     return {
       adoptionId: adoption.id,

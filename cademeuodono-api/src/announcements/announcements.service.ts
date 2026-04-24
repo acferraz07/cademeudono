@@ -27,7 +27,7 @@ export class AnnouncementsService {
   }
 
   async create(ownerId: string, dto: CreateAnnouncementDto) {
-    return this.prisma.announcement.create({
+    const announcement = await this.prisma.announcement.create({
       data: {
         ...dto,
         eventDate: new Date(dto.eventDate),
@@ -39,6 +39,13 @@ export class AnnouncementsService {
         owner: { select: { id: true, fullName: true } },
       },
     })
+
+    const typeLabel = dto.type === 'LOST' ? 'perdido' : 'encontrado'
+    void this.prisma.activityLog.create({
+      data: { userId: ownerId, type: `ANNOUNCEMENT_${dto.type}`, description: `Anúncio de pet ${typeLabel} cadastrado`, entityType: 'announcement', entityId: announcement.id },
+    }).catch(() => {})
+
+    return announcement
   }
 
   async findAll(filters: FilterAnnouncementsDto) {
@@ -134,10 +141,16 @@ export class AnnouncementsService {
   async updateStatus(id: string, requesterId: string, status: AnnouncementStatus) {
     await this.assertOwner(id, requesterId)
 
-    return this.prisma.announcement.update({
+    const announcement = await this.prisma.announcement.update({
       where: { id },
       data: { status },
     })
+
+    void this.prisma.activityLog.create({
+      data: { userId: requesterId, type: 'ANNOUNCEMENT_STATUS', description: `Status do anúncio alterado para ${status}`, entityType: 'announcement', entityId: id },
+    }).catch(() => {})
+
+    return announcement
   }
 
   async remove(id: string, requesterId: string) {

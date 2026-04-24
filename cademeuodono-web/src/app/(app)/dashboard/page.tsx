@@ -1,9 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Plus, Megaphone, Tag, TrendingUp } from 'lucide-react'
+import { Plus, Megaphone, Tag, TrendingUp, PawPrint } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { usersApi } from '@/lib/api'
 import { Card } from '@/components/ui/card'
@@ -48,7 +47,7 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={<div className="relative w-5 h-5"><Image src="/logo.png" alt="" fill className="object-contain" /></div>}
+          icon={<PawPrint size={20} className="text-brand-500" />}
           label="Pets cadastrados"
           value={loading ? '—' : String(pets.length)}
           bg="bg-brand-50"

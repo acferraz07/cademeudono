@@ -43,7 +43,7 @@ export class PetsService {
       continuousMedications, allergies, specialCare,
     ].some((v) => v !== undefined)
 
-    return this.prisma.pet.create({
+    const pet = await this.prisma.pet.create({
       data: {
         ...petData,
         breedId: breedId ?? undefined,
@@ -72,6 +72,12 @@ export class PetsService {
       },
       include: { health: true, breedRecord: { select: { id: true, name: true, species: true } } },
     })
+
+    void this.prisma.activityLog.create({
+      data: { userId: ownerId, type: 'PET_CREATE', description: `Pet "${pet.name}" cadastrado`, entityType: 'pet', entityId: pet.id },
+    }).catch(() => {})
+
+    return pet
   }
 
   async findAllByOwner(ownerId: string) {
@@ -157,7 +163,7 @@ export class PetsService {
       })
     }
 
-    return this.prisma.pet.update({
+    const updated = await this.prisma.pet.update({
       where: { id },
       data: {
         ...petData,
@@ -167,6 +173,12 @@ export class PetsService {
       },
       include: { health: true, breedRecord: { select: { id: true, name: true } } },
     })
+
+    void this.prisma.activityLog.create({
+      data: { userId: requesterId, type: 'PET_UPDATE', description: `Pet "${updated.name}" atualizado`, entityType: 'pet', entityId: id },
+    }).catch(() => {})
+
+    return updated
   }
 
   async remove(id: string, requesterId: string) {
@@ -221,6 +233,11 @@ export class PetsService {
     const ext = originalname.split('.').pop() ?? 'jpg'
     const path = `${ownerId}/${randomUUID()}.${ext}`
     const url = await this.supabase.uploadFile('pets', path, buffer, mimetype)
+
+    void this.prisma.activityLog.create({
+      data: { userId: ownerId, type: 'PET_PHOTO_UPLOAD', description: 'Foto de pet enviada' },
+    }).catch(() => {})
+
     return { url }
   }
 

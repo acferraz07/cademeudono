@@ -3,11 +3,14 @@ import { ApiProperty } from '@nestjs/swagger'
 
 export class ActivateTagDto {
   @ApiProperty({
-    example: 'CMD-ST-00001',
-    description: 'Código impresso na smart tag (formato CMD-ST-00001)',
+    example: 'CMD-ST-202604-000001-X7K9',
+    description: 'Código de ativação impresso no card dentro da embalagem (formato CMD-ST-AAAAMM-000001-AB12)',
   })
   @IsString()
-  @Matches(/^CMD-ST-\d{5}$/, { message: 'Formato inválido. Esperado: CMD-ST-00001' })
+  @Matches(
+    /^CMD-(ST|GPS)-\d{6}-\d{6}-[A-Z0-9]{4}$/,
+    { message: 'Formato inválido. Esperado: CMD-ST-202604-000001-X7K9' },
+  )
   code: string
 
   @ApiProperty({ description: 'ID do pet ao qual a tag será vinculada' })

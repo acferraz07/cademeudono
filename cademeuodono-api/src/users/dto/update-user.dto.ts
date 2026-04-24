@@ -39,6 +39,26 @@ export class UpdateUserDto {
   @IsString()
   neighborhood?: string
 
+  @ApiPropertyOptional({ example: 'Quadra 304 Sul' })
+  @IsOptional()
+  @IsString()
+  block?: string
+
+  @ApiPropertyOptional({ example: '10' })
+  @IsOptional()
+  @IsString()
+  lotNumber?: string
+
+  @ApiPropertyOptional({ example: '12A' })
+  @IsOptional()
+  @IsString()
+  streetNumber?: string
+
+  @ApiPropertyOptional({ example: 'Casa, Apto 302, Bloco B' })
+  @IsOptional()
+  @IsString()
+  complement?: string
+
   @ApiPropertyOptional({ example: '77021-504' })
   @IsOptional()
   @IsString()

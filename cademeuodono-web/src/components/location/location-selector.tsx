@@ -18,7 +18,7 @@ export const PALMAS_NEIGHBORHOODS = [
   'Jardim Aureny IV',
   'Santa Bárbara',
   'Lago Norte',
-  'Jardim dos Ipês',
+  'Jardins dos Ipês',
   'Morada do Sol',
   'Taquari',
   'Irmã Dulce',
@@ -49,12 +49,15 @@ async function fetchCities(uf: string): Promise<string[]> {
   }
 }
 
-interface LocationValue {
+export interface LocationValue {
   state?: string
   city?: string
   neighborhood?: string
   block?: string
+  lotNumber?: string
   street?: string
+  streetNumber?: string
+  complement?: string
 }
 
 interface LocationSelectorProps {
@@ -62,7 +65,10 @@ interface LocationSelectorProps {
   onChange: (field: keyof LocationValue, value: string) => void
   errors?: Partial<Record<keyof LocationValue, string | undefined>>
   showBlock?: boolean
+  showLotNumber?: boolean
   showStreet?: boolean
+  showStreetNumber?: boolean
+  showComplement?: boolean
   requiredState?: boolean
   requiredCity?: boolean
 }
@@ -72,7 +78,10 @@ export function LocationSelector({
   onChange,
   errors,
   showBlock,
+  showLotNumber,
   showStreet,
+  showStreetNumber,
+  showComplement,
   requiredState,
   requiredCity,
 }: LocationSelectorProps) {
@@ -151,7 +160,7 @@ export function LocationSelector({
 
       {isPalmas ? (
         <Select
-          label="Bairro"
+          label="Bairro / Região"
           error={errors?.neighborhood}
           value={value.neighborhood ?? ''}
           onChange={(e) => onChange('neighborhood', e.target.value)}
@@ -165,7 +174,7 @@ export function LocationSelector({
         </Select>
       ) : (
         <Input
-          label="Bairro"
+          label="Bairro / Região"
           placeholder="Nome do bairro"
           error={errors?.neighborhood}
           value={value.neighborhood ?? ''}
@@ -175,11 +184,23 @@ export function LocationSelector({
 
       {showBlock && (
         <Input
-          label="Quadra / Bloco"
+          label="Quadra"
           placeholder={isPalmas ? 'Quadra 304 Sul' : 'Quadra ou bloco'}
+          hint="Digite ou selecione. Ex: Quadra 304 Sul"
           error={errors?.block}
           value={value.block ?? ''}
           onChange={(e) => onChange('block', e.target.value)}
+        />
+      )}
+
+      {showLotNumber && (
+        <Input
+          label="Lote"
+          placeholder="10"
+          hint="Número do lote (alfanumérico)"
+          error={errors?.lotNumber}
+          value={value.lotNumber ?? ''}
+          onChange={(e) => onChange('lotNumber', e.target.value)}
         />
       )}
 
@@ -190,6 +211,27 @@ export function LocationSelector({
           error={errors?.street}
           value={value.street ?? ''}
           onChange={(e) => onChange('street', e.target.value)}
+        />
+      )}
+
+      {showStreetNumber && (
+        <Input
+          label="Número"
+          placeholder="12A"
+          hint="Aceita letras e números. Ex: 12, 12A, S/N"
+          error={errors?.streetNumber}
+          value={value.streetNumber ?? ''}
+          onChange={(e) => onChange('streetNumber', e.target.value)}
+        />
+      )}
+
+      {showComplement && (
+        <Input
+          label="Complemento"
+          placeholder="Casa, Apto 302, Fundo, Bloco B"
+          error={errors?.complement}
+          value={value.complement ?? ''}
+          onChange={(e) => onChange('complement', e.target.value)}
         />
       )}
     </div>

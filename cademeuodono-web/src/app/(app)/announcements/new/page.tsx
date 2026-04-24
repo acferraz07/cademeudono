@@ -275,7 +275,12 @@ export default function NewAnnouncementPage() {
           </h2>
           <LocationSelector
             value={locationValue}
-            onChange={(field, val) => setValue(field, val)}
+            onChange={(field, val) => {
+              const knownFields = ['state', 'city', 'neighborhood', 'block', 'street'] as const
+              if ((knownFields as readonly string[]).includes(field)) {
+                setValue(field as (typeof knownFields)[number], val)
+              }
+            }}
             errors={{
               state: errors.state?.message,
               city: errors.city?.message,

@@ -8,6 +8,7 @@ import type {
   TagPublicData,
   Breed,
   Adoption,
+  ActivityLog,
 } from '@/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'
@@ -126,6 +127,33 @@ export const usersApi = {
 
   getMyAnnouncements: (token: string) =>
     request<Announcement[]>(`${API_URL}/users/me/announcements`, { token }),
+
+  getMyActivities: (token: string, limit = 50) =>
+    request<ActivityLog[]>(`${API_URL}/users/me/activities?limit=${limit}`, { token }),
+
+  uploadAvatar: async (token: string, file: File): Promise<{ avatarUrl: string }> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`${API_URL}/users/me/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    })
+    let body: Record<string, unknown>
+    try {
+      body = await res.json()
+    } catch {
+      throw new ApiError(res.status, 'Resposta inválida do servidor')
+    }
+    if (!res.ok) {
+      const msg = body.message
+      throw new ApiError(
+        res.status,
+        Array.isArray(msg) ? (msg as string[])[0] : (msg as string) ?? 'Erro no upload',
+      )
+    }
+    return body.data as { avatarUrl: string }
+  },
 }
 
 // ─── Pets ─────────────────────────────────────────────────────

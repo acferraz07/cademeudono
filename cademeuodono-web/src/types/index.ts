@@ -38,10 +38,25 @@ export interface User {
   state?: string
   address?: string
   neighborhood?: string
+  block?: string
+  lotNumber?: string
+  streetNumber?: string
+  complement?: string
   role: Role
   isActive: boolean
   createdAt: string
   _count?: { pets: number; announcements: number }
+}
+
+export interface ActivityLog {
+  id: string
+  userId: string
+  type: string
+  description: string
+  entityType?: string
+  entityId?: string
+  metadata?: Record<string, unknown>
+  createdAt: string
 }
 
 export interface Pet {

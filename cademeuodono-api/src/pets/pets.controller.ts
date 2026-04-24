@@ -12,6 +12,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common'
@@ -23,6 +24,7 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
@@ -33,6 +35,7 @@ import { PetsService } from './pets.service'
 import { CreatePetDto } from './dto/create-pet.dto'
 import { UpdatePetDto } from './dto/update-pet.dto'
 import { UpdatePetHealthDto } from './dto/update-pet-health.dto'
+import { FilterPetsDto } from './dto/filter-pets.dto'
 
 @ApiTags('Pets')
 @ApiBearerAuth('JWT')
@@ -66,16 +69,31 @@ export class PetsController {
     return this.petsService.uploadImage(user.id, file.buffer, file.mimetype, file.originalname)
   }
 
+  // ─── Endpoints públicos ──────────────────────────────────────────────────────
+
+  @Get('public')
+  @Public()
+  @ApiOperation({ summary: 'Filtrar pets publicamente por espécie, raça e porte' })
+  @ApiQuery({ name: 'species', required: false, enum: ['DOG', 'CAT', 'OTHER'] })
+  @ApiQuery({ name: 'breedId', required: false, type: String })
+  @ApiQuery({ name: 'size', required: false, enum: ['SMALL', 'MEDIUM', 'LARGE', 'GIANT'] })
+  findPublic(@Query() filters: FilterPetsDto) {
+    return this.petsService.findPublic(filters)
+  }
+
   @Get('public/adoption')
   @Public()
-  @ApiOperation({ summary: 'Listar pets disponíveis para adoção (público)' })
-  findForAdoption() {
-    return this.petsService.findForAdoption()
+  @ApiOperation({ summary: 'Pets disponíveis para adoção com filtros opcionais' })
+  @ApiQuery({ name: 'species', required: false, enum: ['DOG', 'CAT', 'OTHER'] })
+  @ApiQuery({ name: 'breedId', required: false, type: String })
+  @ApiQuery({ name: 'size', required: false, enum: ['SMALL', 'MEDIUM', 'LARGE', 'GIANT'] })
+  findForAdoption(@Query() filters: FilterPetsDto) {
+    return this.petsService.findForAdoption(filters)
   }
 
   @Get('public/adopted')
   @Public()
-  @ApiOperation({ summary: 'Mural de pets adotados (público)' })
+  @ApiOperation({ summary: 'Esses pets fugiram de casa e seus tutores estão à procura deles' })
   findAdopted() {
     return this.petsService.findAdopted()
   }
@@ -86,6 +104,15 @@ export class PetsController {
   findForPetMatch() {
     return this.petsService.findForPetMatch()
   }
+
+  @Get('petmatch/suggestions')
+  @ApiOperation({ summary: 'Sugestões de PetMatch com score de compatibilidade' })
+  @ApiQuery({ name: 'petId', required: true, type: String })
+  petMatchSuggestions(@Query('petId') petId: string) {
+    return this.petsService.petMatchSuggestions(petId)
+  }
+
+  // ─── Endpoints autenticados ──────────────────────────────────────────────────
 
   @Post()
   @ApiOperation({ summary: 'Cadastrar novo pet' })

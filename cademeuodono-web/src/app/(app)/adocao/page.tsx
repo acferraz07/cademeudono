@@ -3,18 +3,20 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { petsApi } from '@/lib/api'
+import { Filter } from 'lucide-react'
+import { petsApi, breedsApi } from '@/lib/api'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { calculatePetAge, SPECIES_LABEL, SIZE_LABEL } from '@/lib/utils'
-import type { Pet } from '@/types'
+import type { Pet, Breed } from '@/types'
 
 const SPECIES_EMOJI: Record<string, string> = { DOG: '🐕', CAT: '🐈', OTHER: '🐾' }
 
 function AdoptionCard({ pet }: { pet: Pet }) {
   const photo = pet.profilePhotoUrl ?? pet.media?.[0]?.url
-  const phone = (pet as any).owner?.phonePrimary ?? ''
+  const whatsapp = (pet as any).owner?.whatsapp ?? (pet as any).owner?.phonePrimary ?? ''
+  const breedDisplay = pet.breedName ?? pet.breed
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
@@ -44,7 +46,7 @@ function AdoptionCard({ pet }: { pet: Pet }) {
           <h3 className="font-semibold text-gray-900">{pet.name}</h3>
           <p className="text-xs text-gray-500 mt-0.5">
             {SPECIES_LABEL[pet.species]}
-            {pet.breed ? ` · ${pet.breed}` : ''}
+            {breedDisplay ? ` · ${breedDisplay}` : ''}
             {pet.size ? ` · ${SIZE_LABEL[pet.size]}` : ''}
           </p>
           {pet.birthDate && (
@@ -68,11 +70,17 @@ function AdoptionCard({ pet }: { pet: Pet }) {
           </div>
         )}
 
-        <div className="mt-auto pt-2">
-          <StatusBadge status="for_adoption" className="mb-3 w-full justify-center" />
-          {phone && (
+        <div className="mt-auto pt-2 flex flex-col gap-2">
+          <StatusBadge status="for_adoption" className="w-full justify-center" />
+          <Link
+            href={`/adocao/adotar/${pet.id}`}
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium transition-colors"
+          >
+            📋 Quero adotar
+          </Link>
+          {whatsapp && (
             <a
-              href={`https://wa.me/55${phone.replace(/\D/g, '')}?text=Ol%C3%A1%21+Vi+o+${encodeURIComponent(pet.name)}+disponível+para+adoção+no+Cadê+Meu+Dono+e+gostaria+de+saber+mais.`}
+              href={`https://wa.me/55${whatsapp.replace(/\D/g, '')}?text=Ol%C3%A1%21+Vi+o+${encodeURIComponent(pet.name)}+disponível+para+adoção+no+Cadê+Meu+Dono+e+gostaria+de+saber+mais.`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
@@ -89,27 +97,93 @@ function AdoptionCard({ pet }: { pet: Pet }) {
 export default function AdocaoPage() {
   const [pets, setPets] = useState<Pet[]>([])
   const [loading, setLoading] = useState(true)
+  const [breeds, setBreeds] = useState<Breed[]>([])
+  const [filterSpecies, setFilterSpecies] = useState('')
+  const [filterBreedId, setFilterBreedId] = useState('')
+  const [filterSize, setFilterSize] = useState('')
 
   useEffect(() => {
-    petsApi.findForAdoption()
+    setLoading(true)
+    petsApi
+      .findForAdoption({
+        species: filterSpecies || undefined,
+        breedId: filterBreedId || undefined,
+        size: filterSize || undefined,
+      })
       .then(setPets)
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [filterSpecies, filterBreedId, filterSize])
+
+  useEffect(() => {
+    if (filterSpecies === 'DOG' || filterSpecies === 'CAT') {
+      breedsApi.findAll(filterSpecies as 'DOG' | 'CAT').then(setBreeds).catch(() => {})
+    } else {
+      setBreeds([])
+      setFilterBreedId('')
+    }
+  }, [filterSpecies])
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">🏡 Adoção responsável</h1>
           <p className="text-sm text-gray-500 mt-1">Pets esperando por um lar cheio de amor</p>
         </div>
-        <Link
-          href="/adocao/adotados"
-          className="text-sm text-brand-600 hover:underline font-medium"
-        >
-          Ver adotados →
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/adocao/minhas" className="text-sm text-brand-600 hover:underline font-medium">
+            Minhas adoções →
+          </Link>
+          <Link href="/adocao/adotados" className="text-sm text-brand-600 hover:underline font-medium">
+            Ver adotados →
+          </Link>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter size={15} className="text-gray-400" />
+          <span className="text-sm font-medium text-gray-700">Filtrar</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select
+            value={filterSpecies}
+            onChange={(e) => { setFilterSpecies(e.target.value); setFilterBreedId('') }}
+            className="rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400"
+          >
+            <option value="">Todas as espécies</option>
+            <option value="DOG">🐕 Cão</option>
+            <option value="CAT">🐈 Gato</option>
+            <option value="OTHER">🐾 Outro</option>
+          </select>
+
+          {breeds.length > 0 && (
+            <select
+              value={filterBreedId}
+              onChange={(e) => setFilterBreedId(e.target.value)}
+              className="rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400"
+            >
+              <option value="">Todas as raças</option>
+              {breeds.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+
+          <select
+            value={filterSize}
+            onChange={(e) => setFilterSize(e.target.value)}
+            className="rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400"
+          >
+            <option value="">Todos os portes</option>
+            <option value="SMALL">Pequeno</option>
+            <option value="MEDIUM">Médio</option>
+            <option value="LARGE">Grande</option>
+            <option value="GIANT">Gigante</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (

@@ -48,6 +48,14 @@ export class SupabaseService {
     return this.client.auth.resetPasswordForEmail(email, options)
   }
 
+  signInWithOtp(params: Parameters<SupabaseClient['auth']['signInWithOtp']>[0]) {
+    return this.client.auth.signInWithOtp(params)
+  }
+
+  verifyOtp(params: Parameters<SupabaseClient['auth']['verifyOtp']>[0]) {
+    return this.client.auth.verifyOtp(params)
+  }
+
   /** Faz upload de um arquivo para um bucket do Supabase Storage e retorna a URL pública */
   async uploadFile(bucket: string, path: string, buffer: Buffer, mimetype: string): Promise<string> {
     const { error } = await this.adminClient.storage

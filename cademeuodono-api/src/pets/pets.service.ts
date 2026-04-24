@@ -9,6 +9,7 @@ import { SupabaseService } from '../supabase/supabase.service'
 import { CreatePetDto } from './dto/create-pet.dto'
 import { UpdatePetDto } from './dto/update-pet.dto'
 import { UpdatePetHealthDto } from './dto/update-pet-health.dto'
+import { FilterPetsDto } from './dto/filter-pets.dto'
 
 @Injectable()
 export class PetsService {
@@ -22,8 +23,20 @@ export class PetsService {
       vetName, vetPhone, vetClinic, petShop,
       vaccinationStatus, dewormingStatus,
       continuousMedications, allergies, specialCare,
+      breedId,
       ...petData
     } = dto
+
+    // Buscar nome da raça se breedId fornecido
+    let breedName = petData.breedName
+    if (breedId && !breedName) {
+      const breedRecord = await this.prisma.breed.findUnique({
+        where: { id: breedId },
+        select: { name: true },
+      })
+      if (breedRecord) breedName = breedRecord.name
+    }
+
     const hasHealthFields = [
       vetName, vetPhone, vetClinic, petShop,
       vaccinationStatus, dewormingStatus,
@@ -33,6 +46,8 @@ export class PetsService {
     return this.prisma.pet.create({
       data: {
         ...petData,
+        breedId: breedId ?? undefined,
+        breedName: breedName ?? undefined,
         birthDate: petData.birthDate ? new Date(petData.birthDate) : undefined,
         coatColor: petData.coatColor ?? [],
         ownerId,
@@ -55,7 +70,7 @@ export class PetsService {
             }
           : {}),
       },
-      include: { health: true },
+      include: { health: true, breedRecord: { select: { id: true, name: true, species: true } } },
     })
   }
 
@@ -66,6 +81,7 @@ export class PetsService {
         health: true,
         media: { where: { isPrimary: true }, take: 1 },
         smartTags: { where: { status: 'ACTIVE' } },
+        breedRecord: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -78,11 +94,13 @@ export class PetsService {
         health: true,
         media: true,
         smartTags: true,
+        breedRecord: { select: { id: true, name: true, species: true, size: true } },
         owner: {
           select: {
             id: true,
             fullName: true,
             phonePrimary: true,
+            whatsapp: true,
             city: true,
             state: true,
           },
@@ -102,8 +120,19 @@ export class PetsService {
       vetName, vetPhone, vetClinic, petShop,
       vaccinationStatus, dewormingStatus,
       continuousMedications, allergies, specialCare,
+      breedId,
       ...petData
     } = dto
+
+    let breedName = petData.breedName
+    if (breedId && !breedName) {
+      const breedRecord = await this.prisma.breed.findUnique({
+        where: { id: breedId },
+        select: { name: true },
+      })
+      if (breedRecord) breedName = breedRecord.name
+    }
+
     const hasHealthFields = [
       vetName, vetPhone, vetClinic, petShop,
       vaccinationStatus, dewormingStatus,
@@ -115,15 +144,9 @@ export class PetsService {
         where: { petId: id },
         create: {
           petId: id,
-          vetName,
-          vetPhone,
-          vetClinic,
-          petShop,
-          vaccinationStatus,
-          dewormingStatus,
-          continuousMedications,
-          allergies,
-          specialCare,
+          vetName, vetPhone, vetClinic, petShop,
+          vaccinationStatus, dewormingStatus,
+          continuousMedications, allergies, specialCare,
           preexistingConditions: [],
         },
         update: {
@@ -138,9 +161,11 @@ export class PetsService {
       where: { id },
       data: {
         ...petData,
+        ...(breedId !== undefined && { breedId }),
+        ...(breedName && { breedName }),
         birthDate: petData.birthDate ? new Date(petData.birthDate) : undefined,
       },
-      include: { health: true },
+      include: { health: true, breedRecord: { select: { id: true, name: true } } },
     })
   }
 
@@ -199,12 +224,22 @@ export class PetsService {
     return { url }
   }
 
-  async findForAdoption() {
+  // ─── Listagens públicas ──────────────────────────────────────────────────────
+
+  async findForAdoption(filters?: FilterPetsDto) {
     return this.prisma.pet.findMany({
-      where: { isForAdoption: true, isAdopted: false, isActive: true },
+      where: {
+        isForAdoption: true,
+        isAdopted: false,
+        isActive: true,
+        ...(filters?.species && { species: filters.species }),
+        ...(filters?.breedId && { breedId: filters.breedId }),
+        ...(filters?.size && { size: filters.size }),
+      },
       include: {
         media: { where: { isPrimary: true }, take: 1 },
-        owner: { select: { id: true, fullName: true, phonePrimary: true, city: true, state: true } },
+        breedRecord: { select: { name: true } },
+        owner: { select: { id: true, fullName: true, phonePrimary: true, whatsapp: true, city: true, state: true } },
       },
       orderBy: [{ adoptionUrgency: 'desc' }, { createdAt: 'desc' }],
     })
@@ -215,6 +250,7 @@ export class PetsService {
       where: { isAdopted: true, isActive: true },
       include: {
         media: { where: { isPrimary: true }, take: 1 },
+        breedRecord: { select: { name: true } },
         owner: { select: { id: true, fullName: true, city: true, state: true } },
       },
       orderBy: { adoptedAt: 'desc' },
@@ -226,10 +262,73 @@ export class PetsService {
       where: { isForPetMatch: true, isActive: true },
       include: {
         media: { where: { isPrimary: true }, take: 1 },
-        owner: { select: { id: true, fullName: true, phonePrimary: true, city: true, state: true } },
+        breedRecord: { select: { name: true } },
+        owner: { select: { id: true, fullName: true, phonePrimary: true, whatsapp: true, city: true, state: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
+  }
+
+  /** Filtro público: GET /pets/public?species=DOG&breedId=...&size=MEDIUM */
+  async findPublic(filters: FilterPetsDto) {
+    return this.prisma.pet.findMany({
+      where: {
+        isActive: true,
+        ...(filters.species && { species: filters.species }),
+        ...(filters.breedId && { breedId: filters.breedId }),
+        ...(filters.size && { size: filters.size }),
+      },
+      include: {
+        media: { where: { isPrimary: true }, take: 1 },
+        breedRecord: { select: { id: true, name: true } },
+        owner: { select: { id: true, fullName: true, city: true, state: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
+  }
+
+  /** PetMatch: sugestões de pets compatíveis com score */
+  async petMatchSuggestions(petId: string) {
+    const sourcePet = await this.prisma.pet.findUnique({
+      where: { id: petId, isActive: true },
+      include: {
+        owner: { select: { city: true, state: true } },
+      },
+    })
+
+    if (!sourcePet) throw new NotFoundException('Pet não encontrado')
+
+    const candidates = await this.prisma.pet.findMany({
+      where: {
+        isForPetMatch: true,
+        isActive: true,
+        species: sourcePet.species,
+        id: { not: petId },
+      },
+      include: {
+        media: { where: { isPrimary: true }, take: 1 },
+        breedRecord: { select: { name: true } },
+        owner: { select: { id: true, fullName: true, phonePrimary: true, whatsapp: true, city: true, state: true } },
+      },
+    })
+
+    const scored = candidates.map((candidate) => {
+      let score = 0
+
+      if (sourcePet.breedId && candidate.breedId === sourcePet.breedId) score += 10
+      if (sourcePet.size && candidate.size === sourcePet.size) score += 5
+      if (
+        sourcePet.owner.city &&
+        candidate.owner.city?.toLowerCase() === sourcePet.owner.city.toLowerCase()
+      ) {
+        score += 3
+      }
+
+      return { ...candidate, matchScore: score }
+    })
+
+    return scored.sort((a, b) => b.matchScore - a.matchScore)
   }
 
   async markAdopted(id: string, requesterId: string) {

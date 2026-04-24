@@ -79,6 +79,31 @@ enum GpsDeviceStatus {
   @@map("gps_device_status")
 }
 
+enum DeviceType {
+  SMART_TAG
+  GPS_TRACKER
+
+  @@map("device_type")
+}
+
+enum DeviceStatus {
+  AVAILABLE
+  SOLD
+  ACTIVATED
+  LOST
+  DISABLED
+
+  @@map("device_status")
+}
+
+enum AdoptionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+
+  @@map("adoption_status")
+}
+
 // ─────────────────────────────────────────────────────────────
 // USUÁRIOS
 // ─────────────────────────────────────────────────────────────
@@ -90,6 +115,7 @@ model User {
   fullName       String   @map("full_name")
   phonePrimary   String?  @map("phone_primary")
   phoneSecondary String?  @map("phone_secondary")
+  whatsapp       String?
   avatarUrl      String?  @map("avatar_url")
   city           String?
   state          String?
@@ -104,6 +130,7 @@ model User {
   pets             Pet[]
   announcements    Announcement[]
   fosterVolunteer  FosterVolunteer?
+  adoptions        Adoption[]
 
   @@map("users")
 }
@@ -140,6 +167,27 @@ model FosterVolunteer {
 }
 
 // ─────────────────────────────────────────────────────────────
+// RAÇAS
+// ─────────────────────────────────────────────────────────────
+
+model Breed {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  species   Species
+  size      PetSize?
+  group     String?
+  isMixed   Boolean  @default(false) @map("is_mixed")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pets Pet[]
+
+  @@unique([name, species])
+  @@index([species])
+  @@map("breeds")
+}
+
+// ─────────────────────────────────────────────────────────────
 // PETS
 // ─────────────────────────────────────────────────────────────
 
@@ -148,6 +196,9 @@ model Pet {
   ownerId         String   @map("owner_id") @db.Uuid
   name            String
   species         Species
+  // Raça estruturada (cão/gato) ou livre (outro)
+  breedId         String?   @map("breed_id") @db.Uuid
+  breedName       String?   @map("breed_name")
   breed           String?
   birthDate       DateTime? @map("birth_date") @db.Date
   ageEstimate     String?   @map("age_estimate")
@@ -192,11 +243,16 @@ model Pet {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   owner         User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  breedRecord   Breed?          @relation(fields: [breedId], references: [id])
   health        PetHealth?
   media         PetMedia[]
   smartTags     SmartTag[]
+  devices       Device[]
   announcements Announcement[]
+  adoptions     Adoption[]
 
+  @@index([breedId])
+  @@index([species, size])
   @@map("pets")
 }
 
@@ -303,7 +359,7 @@ model AnnouncementImage {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SMART TAGS
+// SMART TAGS (legado — mantido para compatibilidade)
 // ─────────────────────────────────────────────────────────────
 
 model SmartTag {
@@ -340,7 +396,99 @@ model TagScanLog {
 }
 
 // ─────────────────────────────────────────────────────────────
-// DISPOSITIVOS GPS (preparado para fase 2)
+// SISTEMA PROFISSIONAL DE DISPOSITIVOS (Smart Tag + GPS)
+// ─────────────────────────────────────────────────────────────
+
+model DeviceBatch {
+  id            String     @id @default(uuid()) @db.Uuid
+  type          DeviceType
+  batchCode     String     @unique @map("batch_code")
+  totalQuantity Int        @map("total_quantity")
+  generatedBy   String?    @map("generated_by") @db.Uuid
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  devices Device[]
+
+  @@index([type])
+  @@map("device_batches")
+}
+
+model Device {
+  id             String       @id @default(uuid()) @db.Uuid
+  code           String       @unique
+  type           DeviceType
+  batchId        String       @map("batch_id") @db.Uuid
+  sequenceNumber Int          @map("sequence_number")
+  securitySuffix String       @map("security_suffix")
+  status         DeviceStatus @default(AVAILABLE)
+  petId          String?      @map("pet_id") @db.Uuid
+  userId         String?      @map("user_id") @db.Uuid
+  activatedAt    DateTime?    @map("activated_at")
+  // GPS específico
+  imei           String?
+  simNumber      String?      @map("sim_number")
+  lastLatitude   Float?       @map("last_latitude")
+  lastLongitude  Float?       @map("last_longitude")
+  batteryLevel   Int?         @map("battery_level")
+  trackingActive Boolean      @default(false) @map("tracking_active")
+  lastSeenAt     DateTime?    @map("last_seen_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  batch DeviceBatch @relation(fields: [batchId], references: [id])
+  pet   Pet?        @relation(fields: [petId], references: [id], onDelete: SetNull)
+
+  @@index([code])
+  @@index([batchId])
+  @@index([petId])
+  @@map("devices")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADOÇÃO COM RESPALDO JURÍDICO
+// ─────────────────────────────────────────────────────────────
+
+model Adoption {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  petId      String         @map("pet_id") @db.Uuid
+  fullName   String         @map("full_name")
+  cpfHash    String         @map("cpf_hash")
+  cpfMasked  String         @map("cpf_masked")
+  status     AdoptionStatus @default(PENDING)
+  ipAddress  String?        @map("ip_address")
+  pdfUrl     String?        @map("pdf_url")
+  acceptedAt DateTime       @default(now()) @map("accepted_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet  Pet  @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([petId])
+  @@map("adoptions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// OTP PARA LOGIN POR TELEFONE / WHATSAPP
+// ─────────────────────────────────────────────────────────────
+
+model OtpVerification {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String
+  codeHash  String   @map("code_hash")
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([phone, expiresAt])
+  @@map("otp_verifications")
+}
+
+// ─────────────────────────────────────────────────────────────
+// DISPOSITIVOS GPS (legado — mantido para compatibilidade)
 // ─────────────────────────────────────────────────────────────
 
 model GpsDevice {

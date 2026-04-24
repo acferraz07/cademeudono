@@ -4,6 +4,7 @@ export type PetSize = 'SMALL' | 'MEDIUM' | 'LARGE' | 'GIANT'
 export type PetSex = 'MALE' | 'FEMALE'
 export type AnnouncementType = 'LOST' | 'FOUND'
 export type AnnouncementStatus = 'ACTIVE' | 'RESOLVED' | 'RETURNED_TO_OWNER' | 'ARCHIVED'
+export type AdoptionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
 
 export const PET_BEHAVIORS = ['docil', 'arisco', 'medroso', 'agressivo', 'brincalhao'] as const
 export type PetBehavior = (typeof PET_BEHAVIORS)[number]
@@ -16,12 +17,22 @@ export const PET_BEHAVIOR_LABEL: Record<PetBehavior, string> = {
   brincalhao: 'Brincalhão',
 }
 
+export interface Breed {
+  id: string
+  name: string
+  species: 'DOG' | 'CAT'
+  size?: PetSize
+  group?: string
+  isMixed: boolean
+}
+
 export interface User {
   id: string
   email: string
   fullName: string
   phonePrimary?: string
   phoneSecondary?: string
+  whatsapp?: string
   avatarUrl?: string
   city?: string
   state?: string
@@ -39,6 +50,8 @@ export interface Pet {
   name: string
   species: Species
   breed?: string
+  breedId?: string
+  breedName?: string
   birthDate?: string
   ageEstimate?: string
   sex?: PetSex
@@ -201,4 +214,25 @@ export interface AuthSession {
   access_token: string
   refresh_token: string
   expires_at?: number
+}
+
+export interface Adoption {
+  id: string
+  userId: string
+  petId: string
+  fullName: string
+  cpfMasked: string
+  acceptedAt: string
+  status: AdoptionStatus
+  pdfUrl?: string
+  ipAddress?: string
+  pet?: {
+    id: string
+    name: string
+    species: Species
+    profilePhotoUrl?: string
+    breed?: string
+    breedName?: string
+  }
+  createdAt: string
 }

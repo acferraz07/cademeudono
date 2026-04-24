@@ -66,9 +66,10 @@ export default function TagsPage() {
           Como funciona
         </h2>
         <p className="text-sm text-brand-700">
-          Cada Smart Tag possui um código único. Ao ser escaneada por qualquer pessoa com um celular,
-          exibe a ficha do seu pet e um botão para entrar em contato via WhatsApp — sem precisar
-          instalar nenhum aplicativo.
+          Cada Smart Tag possui um código único e tecnologia NFC de aproximação. Ao aproximar o celular
+          da tag ou escanear o QR Code, a pessoa acessa instantaneamente a ficha pública do pet, com
+          informações essenciais e um botão para entrar em contato com o tutor via WhatsApp — sem
+          precisar instalar nenhum aplicativo.
         </p>
       </div>
 

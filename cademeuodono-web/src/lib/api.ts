@@ -6,6 +6,8 @@ import type {
   FosterVolunteer,
   PaginatedResponse,
   TagPublicData,
+  Breed,
+  Adoption,
 } from '@/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'
@@ -82,6 +84,30 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
+
+  phoneSendOtp: (phone: string) =>
+    request(`${API_URL}/auth/phone/send-otp`, {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    }),
+
+  phoneVerifyOtp: (phone: string, code: string) =>
+    request<{ user: User; session: { access_token: string; refresh_token: string } }>(
+      `${API_URL}/auth/phone/verify-otp`,
+      { method: 'POST', body: JSON.stringify({ phone, code }) },
+    ),
+
+  whatsappSendOtp: (phone: string) =>
+    request(`${API_URL}/auth/whatsapp/send-otp`, {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    }),
+
+  whatsappVerifyOtp: (whatsapp: string, code: string) =>
+    request<{ user: User; session: { access_token: string; refresh_token: string } }>(
+      `${API_URL}/auth/whatsapp/verify-otp`,
+      { method: 'POST', body: JSON.stringify({ whatsapp, code }) },
+    ),
 }
 
 // ─── Users ───────────────────────────────────────────────────
@@ -136,11 +162,30 @@ export const petsApi = {
   markAdopted: (token: string, id: string) =>
     request<Pet>(`${API_URL}/pets/${id}/mark-adopted`, { method: 'PATCH', token }),
 
-  findForAdoption: () =>
-    request<Pet[]>(`${API_URL}/pets/public/adoption`),
+  findForAdoption: (params?: { species?: string; breedId?: string; size?: string }) => {
+    const q = params
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])
+          )
+        ).toString()
+      : ''
+    return request<Pet[]>(`${API_URL}/pets/public/adoption${q}`)
+  },
 
   findAdopted: () =>
     request<Pet[]>(`${API_URL}/pets/public/adopted`),
+
+  findPublic: (params?: { species?: string; breedId?: string; size?: string }) => {
+    const q = params
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])
+          )
+        ).toString()
+      : ''
+    return request<Pet[]>(`${API_URL}/pets/public${q}`)
+  },
 
   findForPetMatch: () =>
     request<Pet[]>(`${API_URL}/pets/public/petmatch`),
@@ -256,6 +301,35 @@ export const fosterApi = {
 
   deactivate: (token: string) =>
     request(`${API_URL}/foster-volunteers/me`, { method: 'DELETE', token }),
+}
+
+// ─── Breeds ───────────────────────────────────────────────────
+
+export const breedsApi = {
+  findAll: (species?: 'DOG' | 'CAT') => {
+    const q = species ? `?species=${species}` : ''
+    return request<Breed[]>(`${API_URL}/breeds${q}`)
+  },
+}
+
+// ─── Adoption ─────────────────────────────────────────────────
+
+export const adoptionApi = {
+  create: (
+    token: string,
+    data: { petId: string; fullName: string; cpf: string; acceptedTerm: boolean },
+  ) =>
+    request<Adoption>(`${API_URL}/adoptions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  findMy: (token: string) =>
+    request<Adoption[]>(`${API_URL}/adoptions/my`, { token }),
+
+  findOne: (token: string, id: string) =>
+    request<Adoption>(`${API_URL}/adoptions/${id}`, { token }),
 }
 
 // ─── Tags ─────────────────────────────────────────────────────

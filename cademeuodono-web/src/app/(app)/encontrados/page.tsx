@@ -31,7 +31,7 @@ export default function EncontradosPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">📢 Pets encontrados</h1>
-          <p className="text-sm text-gray-500 mt-1">Pets aguardando o tutor aparecer</p>
+          <p className="text-sm text-gray-500 mt-1">Pets encontrados na rua que estão aguardando o tutor aparecer</p>
         </div>
         <Link href="/perdidos" className="text-sm text-brand-600 hover:underline font-medium">
           Ver perdidos →

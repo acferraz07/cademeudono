@@ -18,6 +18,7 @@ import {
   Search,
   Star,
   Home as HomeIcon,
+  ClipboardList,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ const navItems = [
 
 const communityItems = [
   { href: '/adocao', icon: Heart, label: 'Adoção' },
+  { href: '/adocao/minhas', icon: ClipboardList, label: 'Minhas Adoções' },
   { href: '/petmatch', icon: Sparkles, label: 'PetMatch' },
   { href: '/perdidos', icon: SearchX, label: 'Perdidos' },
   { href: '/encontrados', icon: Search, label: 'Encontrados' },

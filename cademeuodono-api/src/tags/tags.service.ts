@@ -16,29 +16,43 @@ export class TagsService {
   /**
    * Retorna os dados públicos do pet vinculado a uma smart tag.
    * Acessível sem autenticação — expõe apenas campos seguros.
+   * Suporta tanto SmartTag (legado) quanto Device (sistema novo).
    */
   async getPublicProfile(code: string, request: Request) {
+    // Tentar SmartTag (sistema legado)
     const tag = await this.prisma.smartTag.findUnique({
       where: { code },
       include: {
         pet: {
           include: {
             owner: {
-              select: { fullName: true, phonePrimary: true },
+              select: { fullName: true, phonePrimary: true, whatsapp: true },
             },
             media: { where: { isPrimary: true }, take: 1 },
+            breedRecord: { select: { name: true } },
           },
         },
       },
     })
 
-    if (!tag) throw new NotFoundException('Tag não encontrada')
+    // Tentar Device (sistema novo)
+    if (!tag) {
+      return this.getPublicProfileFromDevice(code, request)
+    }
 
     if (tag.status !== TagStatus.ACTIVE || !tag.pet) {
       return {
         code,
         isActive: false,
-        message: 'Esta tag ainda não foi ativada ou não está vinculada a um pet.',
+        message:
+          'Esta tag ainda não foi ativada ou não está vinculada a um pet.',
+        tagInfo: {
+          text:
+            'Cada Smart Tag possui um código único e tecnologia NFC de aproximação. ' +
+            'Ao aproximar o celular da tag ou escanear o QR Code, a pessoa acessa instantaneamente ' +
+            'a ficha pública do pet, com informações essenciais e um botão para entrar em contato ' +
+            'com o tutor via WhatsApp — sem precisar instalar nenhum aplicativo.',
+        },
       }
     }
 
@@ -53,17 +67,74 @@ export class TagsService {
       },
     })
 
-    const { pet } = tag
+    return this.buildPublicResponse(code, tag.pet)
+  }
+
+  private async getPublicProfileFromDevice(code: string, request: Request) {
+    const device = await this.prisma.device.findUnique({
+      where: { code },
+      include: {
+        pet: {
+          include: {
+            owner: {
+              select: { fullName: true, phonePrimary: true, whatsapp: true },
+            },
+            media: { where: { isPrimary: true }, take: 1 },
+            breedRecord: { select: { name: true } },
+          },
+        },
+      },
+    })
+
+    if (!device) throw new NotFoundException('Tag não encontrada')
+
+    if (device.status !== 'ACTIVATED' || !device.pet) {
+      return {
+        code,
+        isActive: false,
+        message: 'Esta tag ainda não foi ativada ou não está vinculada a um pet.',
+      }
+    }
+
+    return this.buildPublicResponse(code, device.pet)
+  }
+
+  private buildPublicResponse(
+    code: string,
+    pet: {
+      name: string
+      species: string
+      breed: string | null
+      breedName: string | null
+      breedRecord: { name: string } | null
+      size: string | null
+      coatColor: string[]
+      eyeColor: string | null
+      specificMarks: string | null
+      profilePhotoUrl: string | null
+      media: { url: string }[]
+      owner: { fullName: string; phonePrimary: string | null; whatsapp: string | null }
+    },
+  ) {
     const ownerFirstName = pet.owner.fullName.split(' ')[0]
-    const whatsappNumber = (pet.owner.phonePrimary ?? '').replace(/\D/g, '')
+    // Preferir WhatsApp; fallback para phonePrimary
+    const rawContact = pet.owner.whatsapp ?? pet.owner.phonePrimary ?? ''
+    const whatsappNumber = rawContact.replace(/\D/g, '')
+    const breedDisplay = pet.breedRecord?.name ?? pet.breedName ?? pet.breed ?? null
+
+    const whatsappBaseUrl = this.buildWhatsappUrl(whatsappNumber, pet.name, code)
 
     return {
       code,
       isActive: true,
+      // Dados para o frontend construir URL com localização
+      petName: pet.name,
+      tagCode: code,
+      whatsappNumber,
       pet: {
         name: pet.name,
         species: pet.species,
-        breed: pet.breed,
+        breed: breedDisplay,
         size: pet.size,
         coatColor: pet.coatColor,
         eyeColor: pet.eyeColor,
@@ -75,7 +146,8 @@ export class TagsService {
       },
       contact: {
         whatsappNumber,
-        whatsappUrl: this.buildWhatsappUrl(whatsappNumber),
+        // URL de fallback sem localização — o frontend pode construir uma URL com localização
+        whatsappUrl: whatsappBaseUrl,
       },
     }
   }
@@ -171,12 +243,15 @@ export class TagsService {
     })
   }
 
-  private buildWhatsappUrl(number: string): string {
+  /**
+   * Constrói URL do WhatsApp sem localização (fallback).
+   * O frontend deve construir a URL com localização quando disponível.
+   */
+  private buildWhatsappUrl(number: string, petName: string, tagCode: string): string {
     const message = encodeURIComponent(
-      'Olá! Tudo bem?!\n\n' +
-        '⚠️ Sua Smart tag Cadê Meu Dono foi escaneada.\n\n' +
-        'Encontrei seu pet! Ele está comigo e em segurança.\n\n' +
-        'Podemos combinar a melhor forma para devolvê-lo? 🐾',
+      `Olá! Encontrei o pet ${petName} através da Smart Tag Cadê Meu Dono.\n\n` +
+        `A tag escaneada foi: ${tagCode}\n\n` +
+        `Podemos combinar a melhor forma para devolvê-lo? 🐾`,
     )
     return `https://wa.me/55${number}?text=${message}`
   }

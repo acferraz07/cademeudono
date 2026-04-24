@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs ls *)"
+      "Bash(xargs ls *)",
+      "Bash(npx --prefix D:/claudecode/ARQUIVO_1/cademeuodono-api tsc --noEmit)"
     ]
   }
 }

@@ -15,6 +15,7 @@ import { Input, Select, Textarea } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Card } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
+import { BreedSelector } from '@/components/breeds/breed-selector'
 import { PET_BEHAVIORS, PET_BEHAVIOR_LABEL } from '@/types'
 import { cleanPhone, phoneMask } from '@/lib/utils'
 import type { Pet } from '@/types'
@@ -22,6 +23,7 @@ import type { Pet } from '@/types'
 const schema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(50),
   species: z.enum(['DOG', 'CAT', 'OTHER']),
+  breedId: z.string().optional(),
   breed: z.string().optional(),
   birthDate: z.string().optional(),
   sex: z.enum(['MALE', 'FEMALE', '']).optional(),
@@ -85,10 +87,15 @@ export default function EditPetPage() {
     register,
     handleSubmit,
     reset,
+    watch,
     setValue,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
+
+  const currentSpecies = watch('species')
+  const currentBreedId = watch('breedId')
+  const currentBreed = watch('breed')
 
   useEffect(() => {
     if (!token || !params.id) return
@@ -99,6 +106,7 @@ export default function EditPetPage() {
         reset({
           name: p.name,
           species: p.species,
+          breedId: p.breedId ?? '',
           breed: p.breed ?? '',
           birthDate: p.birthDate ? p.birthDate.split('T')[0] : '',
           sex: p.sex ?? '',
@@ -171,7 +179,8 @@ export default function EditPetPage() {
       await petsApi.update(token, params.id, {
         name: data.name,
         species: data.species,
-        breed: data.breed || undefined,
+        breedId: data.species !== 'OTHER' ? (data.breedId || undefined) : undefined,
+        breed: data.species === 'OTHER' ? (data.breed || undefined) : undefined,
         birthDate: data.birthDate || undefined,
         sex: data.sex || undefined,
         size: data.size || undefined,
@@ -286,16 +295,28 @@ export default function EditPetPage() {
               error={errors.name?.message}
               {...register('name')}
             />
-            <Select label="Espécie" required error={errors.species?.message} {...register('species')}>
+            <Select
+              label="Espécie"
+              required
+              error={errors.species?.message}
+              {...register('species', {
+                onChange: () => {
+                  setValue('breedId', '')
+                  setValue('breed', '')
+                },
+              })}
+            >
               <option value="DOG">🐕 Cão</option>
               <option value="CAT">🐈 Gato</option>
               <option value="OTHER">🐾 Outro</option>
             </Select>
-            <Input
-              label="Raça"
-              placeholder="Labrador, SRD..."
-              error={errors.breed?.message}
-              {...register('breed')}
+            <BreedSelector
+              species={currentSpecies}
+              breedId={currentBreedId}
+              breed={currentBreed}
+              onBreedIdChange={(id) => setValue('breedId', id)}
+              onBreedChange={(text) => setValue('breed', text)}
+              error={errors.breedId?.message ?? errors.breed?.message}
             />
             <Input
               label="Data de nascimento"

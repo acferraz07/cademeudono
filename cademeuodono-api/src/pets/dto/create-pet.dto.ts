@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -24,7 +25,17 @@ export class CreatePetDto {
   @IsEnum(Species)
   species: Species
 
-  @ApiPropertyOptional({ example: 'Labrador Retriever' })
+  @ApiPropertyOptional({ description: 'ID da raça (GET /breeds?species=DOG|CAT)' })
+  @IsOptional()
+  @IsUUID()
+  breedId?: string
+
+  @ApiPropertyOptional({ description: 'Nome da raça desnormalizado (preenchido automaticamente ao informar breedId)' })
+  @IsOptional()
+  @IsString()
+  breedName?: string
+
+  @ApiPropertyOptional({ example: 'Labrador Retriever', description: 'Campo livre para espécie "Outro"' })
   @IsOptional()
   @IsString()
   breed?: string

@@ -17,6 +17,7 @@ interface AuthContextValue {
   token: string | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithToken: (accessToken: string, refreshToken: string) => Promise<void>
   register: (data: {
     fullName: string
     email: string
@@ -63,6 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/dashboard')
   }, [router])
 
+  const loginWithToken = useCallback(async (accessToken: string, refreshToken: string) => {
+    setStoredToken(accessToken, refreshToken)
+    setToken(accessToken)
+    const u = await usersApi.getMe(accessToken)
+    setUser(u)
+    router.push('/dashboard')
+  }, [router])
+
   const register = useCallback(async (data: Parameters<AuthContextValue['register']>[0]) => {
     const { user: u, session } = await authApi.register(data)
     if (session) {
@@ -96,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token, router])
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, loginWithToken, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

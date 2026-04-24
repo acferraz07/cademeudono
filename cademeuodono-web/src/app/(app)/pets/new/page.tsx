@@ -14,12 +14,14 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Card } from '@/components/ui/card'
+import { BreedSelector } from '@/components/breeds/breed-selector'
 import { PET_BEHAVIORS, PET_BEHAVIOR_LABEL } from '@/types'
 import { cleanPhone } from '@/lib/utils'
 
 const schema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(50),
   species: z.enum(['DOG', 'CAT', 'OTHER']),
+  breedId: z.string().optional(),
   breed: z.string().optional(),
   birthDate: z.string().optional(),
   sex: z.enum(['MALE', 'FEMALE', '']).optional(),
@@ -64,6 +66,7 @@ export default function NewPetPage() {
   const {
     register,
     handleSubmit,
+    watch,
     setValue,
     setError,
     formState: { errors, isSubmitting },
@@ -71,6 +74,10 @@ export default function NewPetPage() {
     resolver: zodResolver(schema),
     defaultValues: { species: 'DOG' },
   })
+
+  const currentSpecies = watch('species')
+  const currentBreedId = watch('breedId')
+  const currentBreed = watch('breed')
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -97,6 +104,8 @@ export default function NewPetPage() {
         sex: data.sex || undefined,
         size: data.size || undefined,
         profilePhotoUrl: data.profilePhotoUrl || undefined,
+        breedId: data.species !== 'OTHER' ? (data.breedId || undefined) : undefined,
+        breed: data.species === 'OTHER' ? (data.breed || undefined) : undefined,
         coatColor: data.coatColor
           ? data.coatColor.split(',').map((s) => s.trim()).filter(Boolean)
           : [],
@@ -150,16 +159,28 @@ export default function NewPetPage() {
               error={errors.name?.message}
               {...register('name')}
             />
-            <Select label="Espécie" required error={errors.species?.message} {...register('species')}>
+            <Select
+              label="Espécie"
+              required
+              error={errors.species?.message}
+              {...register('species', {
+                onChange: () => {
+                  setValue('breedId', '')
+                  setValue('breed', '')
+                },
+              })}
+            >
               <option value="DOG">🐕 Cão</option>
               <option value="CAT">🐈 Gato</option>
               <option value="OTHER">🐾 Outro</option>
             </Select>
-            <Input
-              label="Raça"
-              placeholder="Labrador, SRD, Persa..."
-              error={errors.breed?.message}
-              {...register('breed')}
+            <BreedSelector
+              species={currentSpecies}
+              breedId={currentBreedId}
+              breed={currentBreed}
+              onBreedIdChange={(id) => setValue('breedId', id)}
+              onBreedChange={(text) => setValue('breed', text)}
+              error={errors.breedId?.message ?? errors.breed?.message}
             />
             <Input
               label="Data de nascimento"

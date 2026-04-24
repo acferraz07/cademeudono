@@ -18,6 +18,7 @@ const schema = z.object({
   fullName: z.string().min(2, 'Nome obrigatório'),
   phonePrimary: z.string().optional(),
   phoneSecondary: z.string().optional(),
+  whatsapp: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
   neighborhood: z.string().optional(),
@@ -44,6 +45,7 @@ export default function ProfilePage() {
       fullName: user.fullName ?? '',
       phonePrimary: phoneMask(user.phonePrimary ?? ''),
       phoneSecondary: phoneMask(user.phoneSecondary ?? ''),
+      whatsapp: phoneMask(user.whatsapp ?? ''),
       state: user.state ?? '',
       city: user.city ?? '',
       neighborhood: user.neighborhood ?? '',
@@ -58,6 +60,7 @@ export default function ProfilePage() {
         ...data,
         phonePrimary: cleanPhone(data.phonePrimary ?? ''),
         phoneSecondary: cleanPhone(data.phoneSecondary ?? ''),
+        whatsapp: cleanPhone(data.whatsapp ?? ''),
       })
       await refreshUser()
       setSaved(true)
@@ -118,6 +121,12 @@ export default function ProfilePage() {
               label="Telefone secundário"
               error={errors.phoneSecondary?.message}
               {...register('phoneSecondary')}
+            />
+            <PhoneInput
+              label="WhatsApp"
+              hint="Usado como contato preferencial nos botões de contato"
+              error={errors.whatsapp?.message}
+              {...register('whatsapp')}
             />
           </div>
         </Card>

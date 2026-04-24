@@ -11,6 +11,9 @@ import { PetsModule } from './pets/pets.module'
 import { AnnouncementsModule } from './announcements/announcements.module'
 import { TagsModule } from './tags/tags.module'
 import { FosterVolunteersModule } from './foster-volunteers/foster-volunteers.module'
+import { BreedsModule } from './breeds/breeds.module'
+import { DevicesModule } from './devices/devices.module'
+import { AdoptionModule } from './adoption/adoption.module'
 
 @Module({
   imports: [
@@ -27,6 +30,9 @@ import { FosterVolunteersModule } from './foster-volunteers/foster-volunteers.mo
     AnnouncementsModule,
     TagsModule,
     FosterVolunteersModule,
+    BreedsModule,
+    DevicesModule,
+    AdoptionModule,
   ],
   providers: [
     {

@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+  PARTNER
+
+  @@map("role")
+}
+
+enum Species {
+  DOG
+  CAT
+  OTHER
+
+  @@map("species")
+}
+
+enum PetSize {
+  SMALL
+  MEDIUM
+  LARGE
+  GIANT
+
+  @@map("pet_size")
+}
+
+enum PetSex {
+  MALE
+  FEMALE
+
+  @@map("pet_sex")
+}
+
+enum AnnouncementType {
+  LOST
+  FOUND
+
+  @@map("announcement_type")
+}
+
+enum AnnouncementStatus {
+  ACTIVE
+  RESOLVED
+  RETURNED_TO_OWNER
+  ARCHIVED
+
+  @@map("announcement_status")
+}
+
+enum TagStatus {
+  AVAILABLE
+  SOLD
+  ACTIVATION_PENDING
+  ACTIVE
+  INACTIVE
+
+  @@map("tag_status")
+}
+
+enum GpsDeviceStatus {
+  AVAILABLE
+  SOLD
+  ACTIVATION_PENDING
+  ACTIVE
+  INACTIVE
+
+  @@map("gps_device_status")
+}
+
+// ─────────────────────────────────────────────────────────────
+// USUÁRIOS
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  /// ID igual ao UID do Supabase Auth
+  id             String   @id @db.Uuid
+  email          String   @unique
+  fullName       String   @map("full_name")
+  phonePrimary   String?  @map("phone_primary")
+  phoneSecondary String?  @map("phone_secondary")
+  avatarUrl      String?  @map("avatar_url")
+  city           String?
+  state          String?
+  address        String?
+  neighborhood   String?
+  postalCode     String?  @map("postal_code")
+  role           Role     @default(USER)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  pets             Pet[]
+  announcements    Announcement[]
+  fosterVolunteer  FosterVolunteer?
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// LAR TEMPORÁRIO
+// ─────────────────────────────────────────────────────────────
+
+model FosterVolunteer {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  name          String
+  phone         String
+  state         String
+  city          String
+  neighborhood  String?
+  housingType   String   @map("housing_type")
+  hasOtherPets  Boolean  @map("has_other_pets")
+  acceptsDogs   Boolean  @map("accepts_dogs")
+  acceptsCats   Boolean  @map("accepts_cats")
+  acceptedSizes String[] @map("accepted_sizes")
+  maxPets       Int      @default(1) @map("max_pets")
+  availability  String
+  experience    String?
+  observations  String?
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([state, city])
+  @@map("foster_volunteers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PETS
+// ─────────────────────────────────────────────────────────────
+
+model Pet {
+  id              String   @id @default(uuid()) @db.Uuid
+  ownerId         String   @map("owner_id") @db.Uuid
+  name            String
+  species         Species
+  breed           String?
+  birthDate       DateTime? @map("birth_date") @db.Date
+  ageEstimate     String?   @map("age_estimate")
+  sex             PetSex?
+  size            PetSize?
+  weightKg        Decimal?  @map("weight_kg") @db.Decimal(5, 2)
+  coatColor       String[]  @map("coat_color")
+  eyeColor        String?   @map("eye_color")
+  coatType        String?   @map("coat_type")
+  specificMarks   String?   @map("specific_marks")
+  isCastrated     Boolean?  @map("is_castrated")
+  microchipNumber String?   @map("microchip_number")
+  pedigreeNumber  String?   @map("pedigree_number")
+  kennelName      String?   @map("kennel_name")
+  profilePhotoUrl  String?   @map("profile_photo_url")
+  behavior         String[]  @default([])
+  isUrgent         Boolean   @default(false) @map("is_urgent")
+  isLost           Boolean   @default(false) @map("is_lost")
+  lastSeenAt       DateTime? @map("last_seen_at")
+  lastSeenLocation String?   @map("last_seen_location")
+  lostNotes        String?   @map("lost_notes")
+  secretMark       String?   @map("secret_mark")
+  // Adoção responsável
+  isForAdoption        Boolean   @default(false) @map("is_for_adoption")
+  adoptionStory        String?   @map("adoption_story")
+  adoptionReason       String?   @map("adoption_reason")
+  adoptionRequirements String?   @map("adoption_requirements")
+  isInFosterHome       Boolean   @default(false) @map("is_in_foster_home")
+  adoptionUrgency      String    @default("normal") @map("adoption_urgency")
+  isOng                Boolean   @default(false) @map("is_ong")
+  ongName              String?   @map("ong_name")
+  isAdopted            Boolean   @default(false) @map("is_adopted")
+  adoptedAt            DateTime? @map("adopted_at")
+  // PetMatch
+  isForPetMatch        Boolean   @default(false) @map("is_for_pet_match")
+  petMatchObjective    String?   @map("pet_match_objective")
+  petMatchPreferences  String?   @map("pet_match_preferences")
+  acceptsCrossbreeding Boolean?  @map("accepts_crossbreeding")
+  petMatchObservations String?   @map("pet_match_observations")
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  owner         User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  health        PetHealth?
+  media         PetMedia[]
+  smartTags     SmartTag[]
+  announcements Announcement[]
+
+  @@map("pets")
+}
+
+model PetHealth {
+  id                    String    @id @default(uuid()) @db.Uuid
+  petId                 String    @unique @map("pet_id") @db.Uuid
+  vaccinationStatus     String?   @map("vaccination_status")
+  lastVaccinationDate   DateTime? @map("last_vaccination_date") @db.Date
+  dewormingStatus       String?   @map("deworming_status")
+  lastDewormingDate     DateTime? @map("last_deworming_date") @db.Date
+  preexistingConditions String[]  @map("preexisting_conditions")
+  continuousMedications String?   @map("continuous_medications")
+  allergies             String?
+  specialCare           String?   @map("special_care")
+  vetName               String?   @map("vet_name")
+  vetPhone              String?   @map("vet_phone")
+  vetClinic             String?   @map("vet_clinic")
+  petShop               String?   @map("pet_shop")
+  bloodType             String?   @map("blood_type")
+  generalObservations   String?   @map("general_observations")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("pet_health")
+}
+
+model PetMedia {
+  id        String   @id @default(uuid()) @db.Uuid
+  petId     String   @map("pet_id") @db.Uuid
+  url       String
+  type      String   @default("photo")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@map("pet_media")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANÚNCIOS DE PERDIDOS E ENCONTRADOS
+// ─────────────────────────────────────────────────────────────
+
+model Announcement {
+  id            String             @id @default(uuid()) @db.Uuid
+  ownerId       String             @map("owner_id") @db.Uuid
+  petId         String?            @map("pet_id") @db.Uuid
+  type          AnnouncementType
+  status        AnnouncementStatus @default(ACTIVE)
+
+  // Dados do pet (desnormalizados para exibição rápida)
+  petName       String?  @map("pet_name")
+  species       Species
+  breed         String?
+  size          PetSize?
+  coatColor     String[] @map("coat_color")
+  eyeColor      String?  @map("eye_color")
+  specificMarks String?  @map("specific_marks")
+  petPhotoUrl   String?  @map("pet_photo_url")
+
+  // Localização hierárquica
+  state         String
+  city          String
+  neighborhood  String?
+  block         String?
+  street        String?
+  locationNotes String?  @map("location_notes")
+  latitude      Float?
+  longitude     Float?
+
+  // Evento e contato
+  eventDate     DateTime @map("event_date") @db.Date
+  contactPhone  String   @map("contact_phone")
+  contactName   String?  @map("contact_name")
+
+  isFeatured    Boolean @default(false) @map("is_featured")
+  viewsCount    Int     @default(0) @map("views_count")
+  matchedWithId String? @map("matched_with_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner  User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pet    Pet?                @relation(fields: [petId], references: [id], onDelete: SetNull)
+  images AnnouncementImage[]
+
+  @@index([status, type])
+  @@index([city, state])
+  @@index([species, size])
+  @@map("announcements")
+}
+
+model AnnouncementImage {
+  id             String   @id @default(uuid()) @db.Uuid
+  announcementId String   @map("announcement_id") @db.Uuid
+  url            String
+  isPrimary      Boolean  @default(false) @map("is_primary")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@map("announcement_images")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SMART TAGS
+// ─────────────────────────────────────────────────────────────
+
+model SmartTag {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique
+  status      TagStatus @default(AVAILABLE)
+  petId       String?   @map("pet_id") @db.Uuid
+  ownerId     String?   @map("owner_id") @db.Uuid
+  batchNumber String?   @map("batch_number")
+  activatedAt DateTime? @map("activated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  pet      Pet?         @relation(fields: [petId], references: [id], onDelete: SetNull)
+  scanLogs TagScanLog[]
+
+  @@index([petId])
+  @@map("smart_tags")
+}
+
+model TagScanLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  tagCode   String   @map("tag_code")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  latitude  Float?
+  longitude Float?
+  scannedAt DateTime @default(now()) @map("scanned_at")
+
+  tag SmartTag @relation(fields: [tagCode], references: [code])
+
+  @@index([tagCode, scannedAt(sort: Desc)])
+  @@map("tag_scan_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// DISPOSITIVOS GPS (preparado para fase 2)
+// ─────────────────────────────────────────────────────────────
+
+model GpsDevice {
+  id              String          @id @default(uuid()) @db.Uuid
+  deviceCode      String          @unique @map("device_code")
+  serialNumber    String?         @map("serial_number")
+  firmwareVersion String?         @map("firmware_version")
+  status          GpsDeviceStatus @default(AVAILABLE)
+  petId           String?         @map("pet_id") @db.Uuid
+  ownerId         String?         @map("owner_id") @db.Uuid
+  batteryLevel    Int?            @map("battery_level")
+  signalStrength  Int?            @map("signal_strength")
+  lastSeenAt      DateTime?       @map("last_seen_at")
+  activatedAt     DateTime?       @map("activated_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  locations GpsLocation[]
+
+  @@map("gps_devices")
+}
+
+model GpsLocation {
+  id         BigInt   @id @default(autoincrement())
+  deviceId   String   @map("device_id") @db.Uuid
+  petId      String?  @map("pet_id") @db.Uuid
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  altitude   Float?
+  speed      Float?
+  recordedAt DateTime @map("recorded_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  device GpsDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, recordedAt(sort: Desc)])
+  @@map("gps_locations")
+}

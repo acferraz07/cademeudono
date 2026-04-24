@@ -1,0 +1,732 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ArrowLeft, AlertTriangle, UploadCloud, CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { useAuth, ApiError } from '@/contexts/auth-context'
+import { petsApi } from '@/lib/api'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Input, Select, Textarea } from '@/components/ui/input'
+import { PhoneInput } from '@/components/ui/phone-input'
+import { Card } from '@/components/ui/card'
+import { Spinner } from '@/components/ui/spinner'
+import { PET_BEHAVIORS, PET_BEHAVIOR_LABEL } from '@/types'
+import { cleanPhone, phoneMask } from '@/lib/utils'
+import type { Pet } from '@/types'
+
+const schema = z.object({
+  name: z.string().min(1, 'Nome obrigatório').max(50),
+  species: z.enum(['DOG', 'CAT', 'OTHER']),
+  breed: z.string().optional(),
+  birthDate: z.string().optional(),
+  sex: z.enum(['MALE', 'FEMALE', '']).optional(),
+  size: z.enum(['SMALL', 'MEDIUM', 'LARGE', 'GIANT', '']).optional(),
+  isCastrated: z.boolean().optional(),
+  coatColor: z.string().optional(),
+  coatType: z.string().optional(),
+  eyeColor: z.string().optional(),
+  specificMarks: z.string().optional(),
+  behavior: z.array(z.string()).optional(),
+  isUrgent: z.boolean().optional(),
+  isLost: z.boolean().optional(),
+  lastSeenLocation: z.string().optional(),
+  lostNotes: z.string().optional(),
+  secretMark: z.string().optional(),
+  profilePhotoUrl: z.string().url('URL inválida').optional().or(z.literal('')),
+  ageEstimate: z.string().optional(),
+  // Adoção
+  isForAdoption: z.boolean().optional(),
+  adoptionStory: z.string().optional(),
+  adoptionReason: z.string().optional(),
+  adoptionRequirements: z.string().optional(),
+  isInFosterHome: z.boolean().optional(),
+  adoptionUrgency: z.string().optional(),
+  isOng: z.boolean().optional(),
+  ongName: z.string().optional(),
+  // PetMatch
+  isForPetMatch: z.boolean().optional(),
+  petMatchObjective: z.string().optional(),
+  petMatchPreferences: z.string().optional(),
+  acceptsCrossbreeding: z.boolean().optional(),
+  petMatchObservations: z.string().optional(),
+  // Health
+  vetName: z.string().optional(),
+  vetPhone: z.string().optional(),
+  vetClinic: z.string().optional(),
+  petShop: z.string().optional(),
+  vaccinationStatus: z.string().optional(),
+  dewormingStatus: z.string().optional(),
+  continuousMedications: z.string().optional(),
+  allergies: z.string().optional(),
+  specialCare: z.string().optional(),
+  generalObservations: z.string().optional(),
+})
+
+type FormData = z.infer<typeof schema>
+
+export default function EditPetPage() {
+  const router = useRouter()
+  const params = useParams<{ id: string }>()
+  const { token } = useAuth()
+  const [pet, setPet] = useState<Pet | null>(null)
+  const [loadError, setLoadError] = useState('')
+  const [adoptedSuccess, setAdoptedSuccess] = useState(false)
+  const [adoptLoading, setAdoptLoading] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) })
+
+  useEffect(() => {
+    if (!token || !params.id) return
+    petsApi
+      .findOne(token, params.id)
+      .then((p) => {
+        setPet(p)
+        reset({
+          name: p.name,
+          species: p.species,
+          breed: p.breed ?? '',
+          birthDate: p.birthDate ? p.birthDate.split('T')[0] : '',
+          sex: p.sex ?? '',
+          size: p.size ?? '',
+          isCastrated: p.isCastrated ?? false,
+          coatColor: p.coatColor?.join(', ') ?? '',
+          coatType: p.coatType ?? '',
+          eyeColor: p.eyeColor ?? '',
+          specificMarks: p.specificMarks ?? '',
+          behavior: p.behavior ?? [],
+          isUrgent: p.isUrgent ?? false,
+          isLost: p.isLost ?? false,
+          lastSeenLocation: p.lastSeenLocation ?? '',
+          lostNotes: p.lostNotes ?? '',
+          secretMark: p.secretMark ?? '',
+          profilePhotoUrl: p.profilePhotoUrl ?? '',
+          ageEstimate: p.ageEstimate ?? '',
+          // Adoção
+          isForAdoption: p.isForAdoption ?? false,
+          adoptionStory: p.adoptionStory ?? '',
+          adoptionReason: p.adoptionReason ?? '',
+          adoptionRequirements: p.adoptionRequirements ?? '',
+          isInFosterHome: p.isInFosterHome ?? false,
+          adoptionUrgency: p.adoptionUrgency ?? 'normal',
+          isOng: p.isOng ?? false,
+          ongName: p.ongName ?? '',
+          // PetMatch
+          isForPetMatch: p.isForPetMatch ?? false,
+          petMatchObjective: p.petMatchObjective ?? '',
+          petMatchPreferences: p.petMatchPreferences ?? '',
+          acceptsCrossbreeding: p.acceptsCrossbreeding ?? false,
+          petMatchObservations: p.petMatchObservations ?? '',
+          // Health
+          vetName: p.health?.vetName ?? '',
+          vetPhone: phoneMask(p.health?.vetPhone ?? ''),
+          vetClinic: p.health?.vetClinic ?? '',
+          petShop: p.health?.petShop ?? '',
+          vaccinationStatus: p.health?.vaccinationStatus ?? '',
+          dewormingStatus: p.health?.dewormingStatus ?? '',
+          continuousMedications: p.health?.continuousMedications ?? '',
+          allergies: p.health?.allergies ?? '',
+          specialCare: p.health?.specialCare ?? '',
+          generalObservations: p.health?.generalObservations ?? '',
+        })
+        if (p.profilePhotoUrl) setPhotoPreview(p.profilePhotoUrl)
+      })
+      .catch(() => setLoadError('Pet não encontrado'))
+  }, [token, params.id, reset])
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !token) return
+    setPhotoError('')
+    setIsUploading(true)
+    setPhotoPreview(URL.createObjectURL(file))
+    try {
+      const { url } = await petsApi.uploadImage(token, file)
+      setValue('profilePhotoUrl', url, { shouldValidate: true })
+    } catch {
+      setPhotoError('Erro ao enviar imagem. Tente novamente.')
+      setPhotoPreview(null)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  async function onSubmit(data: FormData) {
+    if (!token || !params.id) return
+    try {
+      await petsApi.update(token, params.id, {
+        name: data.name,
+        species: data.species,
+        breed: data.breed || undefined,
+        birthDate: data.birthDate || undefined,
+        sex: data.sex || undefined,
+        size: data.size || undefined,
+        isCastrated: data.isCastrated,
+        coatColor: data.coatColor
+          ? data.coatColor.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        coatType: data.coatType || undefined,
+        eyeColor: data.eyeColor || undefined,
+        specificMarks: data.specificMarks || undefined,
+        behavior: data.behavior,
+        isUrgent: data.isUrgent,
+        isLost: data.isLost,
+        lastSeenLocation: data.lastSeenLocation || undefined,
+        lostNotes: data.lostNotes || undefined,
+        secretMark: data.secretMark || undefined,
+        profilePhotoUrl: data.profilePhotoUrl || undefined,
+        ageEstimate: data.ageEstimate || undefined,
+        // Adoção
+        isForAdoption: data.isForAdoption,
+        adoptionStory: data.adoptionStory || undefined,
+        adoptionReason: data.adoptionReason || undefined,
+        adoptionRequirements: data.adoptionRequirements || undefined,
+        isInFosterHome: data.isInFosterHome,
+        adoptionUrgency: data.adoptionUrgency || 'normal',
+        isOng: data.isOng,
+        ongName: data.ongName || undefined,
+        // PetMatch
+        isForPetMatch: data.isForPetMatch,
+        petMatchObjective: data.petMatchObjective || undefined,
+        petMatchPreferences: data.petMatchPreferences || undefined,
+        acceptsCrossbreeding: data.acceptsCrossbreeding,
+        petMatchObservations: data.petMatchObservations || undefined,
+      })
+
+      await petsApi.upsertHealth(token, params.id, {
+        vetName: data.vetName || undefined,
+        vetPhone: data.vetPhone ? cleanPhone(data.vetPhone) : undefined,
+        vetClinic: data.vetClinic || undefined,
+        petShop: data.petShop || undefined,
+        vaccinationStatus: data.vaccinationStatus || undefined,
+        dewormingStatus: data.dewormingStatus || undefined,
+        continuousMedications: data.continuousMedications || undefined,
+        allergies: data.allergies || undefined,
+        specialCare: data.specialCare || undefined,
+        generalObservations: data.generalObservations || undefined,
+      })
+
+      router.push('/pets')
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Erro ao salvar o pet'
+      setError('root', { message: msg })
+    }
+  }
+
+  async function handleMarkAdopted() {
+    if (!token || !params.id) return
+    if (!confirm(`Marcar ${pet?.name} como adotado? Isso remove o pet das listagens de adoção.`)) return
+    setAdoptLoading(true)
+    try {
+      await petsApi.markAdopted(token, params.id)
+      setAdoptedSuccess(true)
+      setTimeout(() => router.push('/pets'), 2000)
+    } catch {
+      alert('Erro ao marcar como adotado')
+    } finally {
+      setAdoptLoading(false)
+    }
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="text-rose-600 font-medium">{loadError}</p>
+        <Link href="/pets" className="mt-4 text-sm text-brand-600 hover:underline">
+          Voltar para meus pets
+        </Link>
+      </div>
+    )
+  }
+
+  if (!pet) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/pets" className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+          <ArrowLeft size={18} />
+        </Link>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Editar {pet.name}</h1>
+          <p className="text-sm text-gray-500">Atualize as informações do pet</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Identidade */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">🐾</span> Identidade
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Nome do pet"
+              required
+              error={errors.name?.message}
+              {...register('name')}
+            />
+            <Select label="Espécie" required error={errors.species?.message} {...register('species')}>
+              <option value="DOG">🐕 Cão</option>
+              <option value="CAT">🐈 Gato</option>
+              <option value="OTHER">🐾 Outro</option>
+            </Select>
+            <Input
+              label="Raça"
+              placeholder="Labrador, SRD..."
+              error={errors.breed?.message}
+              {...register('breed')}
+            />
+            <Input
+              label="Data de nascimento"
+              type="date"
+              error={errors.birthDate?.message}
+              {...register('birthDate')}
+            />
+            <Input
+              label="Idade aproximada"
+              placeholder="Ex: 2 anos, 8 meses"
+              hint="Preencha se não souber a data de nascimento"
+              error={errors.ageEstimate?.message}
+              {...register('ageEstimate')}
+            />
+          </div>
+        </Card>
+
+        {/* Aparência */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">🎨</span> Aparência
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select label="Sexo" error={errors.sex?.message} {...register('sex')}>
+              <option value="">Não informado</option>
+              <option value="MALE">Macho</option>
+              <option value="FEMALE">Fêmea</option>
+            </Select>
+            <Select label="Porte" error={errors.size?.message} {...register('size')}>
+              <option value="">Não informado</option>
+              <option value="SMALL">Pequeno (até 10kg)</option>
+              <option value="MEDIUM">Médio (10–25kg)</option>
+              <option value="LARGE">Grande (25–45kg)</option>
+              <option value="GIANT">Gigante (acima de 45kg)</option>
+            </Select>
+            <Input
+              label="Cor da pelagem"
+              placeholder="Caramelo, preto e branco..."
+              hint="Separe as cores por vírgula"
+              error={errors.coatColor?.message}
+              {...register('coatColor')}
+            />
+            <Input
+              label="Tipo de pelagem"
+              placeholder="Curto, longo, crespo..."
+              error={errors.coatType?.message}
+              {...register('coatType')}
+            />
+            <Input
+              label="Cor dos olhos"
+              placeholder="Castanho, verde, azul..."
+              error={errors.eyeColor?.message}
+              {...register('eyeColor')}
+            />
+            <div className="flex items-end pb-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  {...register('isCastrated')}
+                />
+                <span className="text-sm font-medium text-gray-700">Castrado(a)</span>
+              </label>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Textarea
+              label="Marcas e características específicas"
+              placeholder="Ex: Mancha preta na pata esquerda..."
+              error={errors.specificMarks?.message}
+              {...register('specificMarks')}
+            />
+          </div>
+        </Card>
+
+        {/* Temperamento */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">💭</span> Temperamento
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">Selecione todos que se aplicam</p>
+          <div className="flex flex-wrap gap-3">
+            {PET_BEHAVIORS.map((b) => (
+              <label key={b} className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  value={b}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  {...register('behavior')}
+                />
+                <span className="text-sm text-gray-700">{PET_BEHAVIOR_LABEL[b]}</span>
+              </label>
+            ))}
+          </div>
+          <div className="mt-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                {...register('isUrgent')}
+              />
+              <span className="text-sm font-medium text-gray-700">
+                ⚠️ Precisa de atenção urgente
+              </span>
+            </label>
+          </div>
+        </Card>
+
+        {/* Modo perdido */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">🚨</span> Status de perda
+          </h2>
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-rose-500 focus:ring-rose-500"
+                {...register('isLost')}
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Marcar como perdido
+              </span>
+            </label>
+            <Input
+              label="Último local visto"
+              placeholder="Praça central do bairro..."
+              error={errors.lastSeenLocation?.message}
+              {...register('lastSeenLocation')}
+            />
+            <Textarea
+              label="Observações sobre o desaparecimento"
+              placeholder="Fugiu pelo portão, estava sem coleira..."
+              error={errors.lostNotes?.message}
+              {...register('lostNotes')}
+            />
+          </div>
+        </Card>
+
+        {/* Adoção responsável */}
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <span className="text-lg">🏡</span> Adoção responsável
+            </h2>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500"
+                {...register('isForAdoption')}
+              />
+              <span className="text-sm font-medium text-gray-700">Disponível para adoção</span>
+            </label>
+          </div>
+          <div className="space-y-4">
+            <Textarea
+              label="História do pet"
+              placeholder="Conte a história do pet, personalidade, hábitos..."
+              error={errors.adoptionStory?.message}
+              {...register('adoptionStory')}
+            />
+            <Textarea
+              label="Motivo da adoção"
+              placeholder="Por que o pet está sendo disponibilizado..."
+              error={errors.adoptionReason?.message}
+              {...register('adoptionReason')}
+            />
+            <Textarea
+              label="Requisitos para o adotante"
+              placeholder="Ter espaço, não ter outros animais, etc..."
+              error={errors.adoptionRequirements?.message}
+              {...register('adoptionRequirements')}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Nível de urgência"
+                {...register('adoptionUrgency')}
+              >
+                <option value="normal">Normal</option>
+                <option value="urgent">Urgente</option>
+              </Select>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  {...register('isInFosterHome')}
+                />
+                <span className="text-sm text-gray-700">Está em lar temporário</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  {...register('isOng')}
+                />
+                <span className="text-sm text-gray-700">Pertence a ONG</span>
+              </label>
+            </div>
+            <Input
+              label="Nome da ONG"
+              placeholder="Nome da organização"
+              error={errors.ongName?.message}
+              {...register('ongName')}
+            />
+            {pet?.isForAdoption && !pet?.isAdopted && (
+              <div className="pt-2 border-t border-gray-100">
+                {adoptedSuccess ? (
+                  <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 rounded-xl px-4 py-3">
+                    <CheckCircle2 size={16} />
+                    Adoção registrada! Redirecionando...
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleMarkAdopted}
+                    loading={adoptLoading}
+                  >
+                    ✅ Marcar como adotado
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* PetMatch */}
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <span className="text-lg">💘</span> PetMatch
+            </h2>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
+                {...register('isForPetMatch')}
+              />
+              <span className="text-sm font-medium text-gray-700">Disponível no PetMatch</span>
+            </label>
+          </div>
+          <div className="space-y-4">
+            <Textarea
+              label="Objetivo"
+              placeholder="O que você busca para o seu pet..."
+              error={errors.petMatchObjective?.message}
+              {...register('petMatchObjective')}
+            />
+            <Textarea
+              label="Preferências"
+              placeholder="Preferência de raça, porte, temperamento..."
+              error={errors.petMatchPreferences?.message}
+              {...register('petMatchPreferences')}
+            />
+            <Textarea
+              label="Observações"
+              placeholder="Informações relevantes para o PetMatch..."
+              error={errors.petMatchObservations?.message}
+              {...register('petMatchObservations')}
+            />
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300"
+                {...register('acceptsCrossbreeding')}
+              />
+              <span className="text-sm text-gray-700">Aceita cruzamento</span>
+            </label>
+          </div>
+        </Card>
+
+        {/* Foto */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">📸</span> Foto do pet
+          </h2>
+          <div className="space-y-4">
+            {photoPreview && (
+              <div className="flex justify-center">
+                <Image
+                  src={photoPreview}
+                  alt="Preview do pet"
+                  width={128}
+                  height={128}
+                  className="h-32 w-32 rounded-full object-cover border-2 border-gray-200"
+                  unoptimized
+                />
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Foto do pet</label>
+              <label
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
+                  isUploading
+                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                    : 'border-gray-300 hover:border-brand-400 hover:bg-brand-50'
+                }`}
+              >
+                <UploadCloud size={18} className="text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-500">
+                  {isUploading ? 'Enviando...' : photoPreview ? 'Trocar imagem' : 'Selecionar imagem'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={handlePhotoChange}
+                  disabled={isUploading}
+                />
+              </label>
+              {photoError && <p className="text-xs text-rose-600">{photoError}</p>}
+              {errors.profilePhotoUrl && (
+                <p className="text-xs text-rose-600">{errors.profilePhotoUrl.message}</p>
+              )}
+            </div>
+            <input type="hidden" {...register('profilePhotoUrl')} />
+          </div>
+        </Card>
+
+        {/* Veterinário e saúde */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">🏥</span> Veterinário e saúde
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Nome do veterinário"
+              placeholder="Dr. Roberto Alves"
+              error={errors.vetName?.message}
+              {...register('vetName')}
+            />
+            <PhoneInput
+              label="Telefone do veterinário"
+              error={errors.vetPhone?.message}
+              {...register('vetPhone')}
+            />
+            <Input
+              label="Clínica veterinária"
+              placeholder="VetPalmas"
+              error={errors.vetClinic?.message}
+              {...register('vetClinic')}
+            />
+            <Input
+              label="Pet shop"
+              placeholder="PetShop Amigo Fiel"
+              error={errors.petShop?.message}
+              {...register('petShop')}
+            />
+            <Select
+              label="Vacinação"
+              error={errors.vaccinationStatus?.message}
+              {...register('vaccinationStatus')}
+            >
+              <option value="">Não informado</option>
+              <option value="up_to_date">Em dia</option>
+              <option value="outdated">Atrasada</option>
+              <option value="unknown">Desconhecido</option>
+            </Select>
+            <Select
+              label="Vermifugação"
+              error={errors.dewormingStatus?.message}
+              {...register('dewormingStatus')}
+            >
+              <option value="">Não informado</option>
+              <option value="up_to_date">Em dia</option>
+              <option value="outdated">Atrasada</option>
+              <option value="unknown">Desconhecido</option>
+            </Select>
+          </div>
+          <div className="mt-4 space-y-4">
+            <Input
+              label="Medicações contínuas"
+              placeholder="Enalapril 2,5mg — 1x ao dia"
+              error={errors.continuousMedications?.message}
+              {...register('continuousMedications')}
+            />
+            <Input
+              label="Alergias"
+              placeholder="Frango, anti-inflamatórios..."
+              error={errors.allergies?.message}
+              {...register('allergies')}
+            />
+            <Textarea
+              label="Cuidados especiais"
+              placeholder="Evitar esforço intenso, dieta específica..."
+              error={errors.specialCare?.message}
+              {...register('specialCare')}
+            />
+            <Textarea
+              label="Observações gerais"
+              placeholder="Observações gerais sobre a saúde do pet..."
+              error={errors.generalObservations?.message}
+              {...register('generalObservations')}
+            />
+          </div>
+        </Card>
+
+        {/* Marca secreta */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <span className="text-lg">🔒</span> Marca secreta
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Visível apenas para você. Ajuda a confirmar que o pet encontrado é o seu.
+          </p>
+          <Textarea
+            label="Marca secreta"
+            placeholder="Pinta rosa na barriga, formato de coração..."
+            error={errors.secretMark?.message}
+            {...register('secretMark')}
+          />
+        </Card>
+
+        {errors.root && (
+          <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 rounded-xl px-4 py-3">
+            <AlertTriangle size={16} className="shrink-0" />
+            {errors.root.message}
+          </div>
+        )}
+
+        <div className="flex gap-3 pb-8">
+          <Link href="/pets" className={buttonVariants({ variant: 'outline' })}>
+            Cancelar
+          </Link>
+          <Button type="submit" loading={isSubmitting} fullWidth>
+            Salvar alterações
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}

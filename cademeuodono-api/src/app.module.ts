@@ -14,6 +14,7 @@ import { FosterVolunteersModule } from './foster-volunteers/foster-volunteers.mo
 import { BreedsModule } from './breeds/breeds.module'
 import { DevicesModule } from './devices/devices.module'
 import { AdoptionModule } from './adoption/adoption.module'
+import { OrgProtectorsModule } from './org-protectors/org-protectors.module'
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AdoptionModule } from './adoption/adoption.module'
     BreedsModule,
     DevicesModule,
     AdoptionModule,
+    OrgProtectorsModule,
   ],
   providers: [
     {

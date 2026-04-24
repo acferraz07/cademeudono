@@ -24,6 +24,8 @@ const ACTIVITY_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg
   PET_CREATE:            { icon: <PawPrint size={16} />, color: 'text-brand-600', bg: 'bg-brand-50' },
   PET_UPDATE:            { icon: <Edit3 size={16} />, color: 'text-sky-600', bg: 'bg-sky-50' },
   PET_PHOTO_UPLOAD:      { icon: <ImagePlus size={16} />, color: 'text-violet-600', bg: 'bg-violet-50' },
+  PET_ADOPTED:           { icon: <Heart size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  PET_RETURNED:          { icon: <CheckCircle2 size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   TAG_ACTIVATED:         { icon: <Tag size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ANNOUNCEMENT_LOST:     { icon: <Megaphone size={16} />, color: 'text-rose-600', bg: 'bg-rose-50' },
   ANNOUNCEMENT_FOUND:    { icon: <Megaphone size={16} />, color: 'text-amber-600', bg: 'bg-amber-50' },

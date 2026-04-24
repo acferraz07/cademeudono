@@ -4,6 +4,7 @@ import type {
   PetHealth,
   Announcement,
   FosterVolunteer,
+  OrgProtector,
   PaginatedResponse,
   TagPublicData,
   Breed,
@@ -358,6 +359,44 @@ export const adoptionApi = {
 
   findOne: (token: string, id: string) =>
     request<Adoption>(`${API_URL}/adoptions/${id}`, { token }),
+}
+
+// ─── ONG / Protetores ─────────────────────────────────────────
+
+export const orgProtectorsApi = {
+  create: (token: string, data: Partial<OrgProtector>) =>
+    request<OrgProtector>(`${API_URL}/org-protectors`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  findAll: (params?: { state?: string; city?: string; type?: string }) => {
+    const q = params
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])
+          )
+        ).toString()
+      : ''
+    return request<OrgProtector[]>(`${API_URL}/org-protectors${q}`)
+  },
+
+  findOne: (id: string) =>
+    request<OrgProtector>(`${API_URL}/org-protectors/${id}`),
+
+  findMine: (token: string) =>
+    request<OrgProtector>(`${API_URL}/org-protectors/me`, { token }),
+
+  update: (token: string, data: Partial<OrgProtector>) =>
+    request<OrgProtector>(`${API_URL}/org-protectors/me`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  deactivate: (token: string) =>
+    request(`${API_URL}/org-protectors/me`, { method: 'DELETE', token }),
 }
 
 // ─── Tags ─────────────────────────────────────────────────────

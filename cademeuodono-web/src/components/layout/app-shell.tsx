@@ -20,6 +20,7 @@ import {
   Home as HomeIcon,
   ClipboardList,
   Activity,
+  Building2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -33,13 +34,14 @@ const navItems = [
 ]
 
 const communityItems = [
-  { href: '/adocao', icon: Heart, label: 'Adoção' },
-  { href: '/adocao/minhas', icon: ClipboardList, label: 'Minhas Adoções' },
+  { href: '/adocao', icon: Heart, label: 'Pets disponíveis para adoção' },
+  { href: '/adocao/minhas', icon: ClipboardList, label: 'Minhas adoções' },
   { href: '/petmatch', icon: Sparkles, label: 'PetMatch' },
-  { href: '/perdidos', icon: SearchX, label: 'Perdidos' },
-  { href: '/encontrados', icon: Search, label: 'Encontrados' },
-  { href: '/devolvidos', icon: Star, label: 'Devolvidos' },
-  { href: '/lar-temporario', icon: HomeIcon, label: 'Lar Temporário' },
+  { href: '/perdidos', icon: SearchX, label: 'Pets perdidos' },
+  { href: '/encontrados', icon: Search, label: 'Pets encontrados' },
+  { href: '/devolvidos', icon: Star, label: 'Pets devolvidos' },
+  { href: '/lar-temporario', icon: HomeIcon, label: 'Lar temporário' },
+  { href: '/ongs-protetores', icon: Building2, label: 'ONGs e Protetores' },
 ]
 
 const accountItems = [

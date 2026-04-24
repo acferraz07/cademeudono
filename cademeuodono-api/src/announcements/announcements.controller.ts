@@ -84,8 +84,11 @@ export class AnnouncementsController {
   @Get(':id')
   @ApiOperation({ summary: 'Buscar anúncio por ID' })
   @ApiParam({ name: 'id', type: String })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.announcementsService.findOne(id)
+  findOne(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.announcementsService.findOne(id, user?.id)
   }
 
   @Patch(':id')

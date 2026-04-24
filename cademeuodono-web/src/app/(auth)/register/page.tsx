@@ -16,6 +16,9 @@ const schema = z
     phonePrimary: z.string().optional(),
     password: z.string().min(8, 'Mínimo 8 caracteres'),
     confirmPassword: z.string(),
+    lgpdAccepted: z.boolean().refine((v) => v === true, {
+      message: 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar',
+    }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'As senhas não coincidem',
@@ -34,9 +37,9 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-  async function onSubmit({ confirmPassword, ...data }: FormData) {
+  async function onSubmit({ confirmPassword, lgpdAccepted, ...data }: FormData) {
     try {
-      await registerUser(data)
+      await registerUser({ ...data, lgpdAccepted })
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Erro ao cadastrar. Tente novamente.'
       setError('root', { message: msg })
@@ -108,6 +111,28 @@ export default function RegisterPage() {
             {...register('confirmPassword')}
           />
 
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+              {...register('lgpdAccepted', { setValueAs: (v) => Boolean(v) })}
+            />
+            <span className="text-xs text-gray-600 leading-relaxed">
+              Li e aceito os{' '}
+              <Link href="/terms" className="text-brand-600 hover:underline font-medium" target="_blank">
+                Termos de Uso
+              </Link>{' '}
+              e a{' '}
+              <Link href="/privacy" className="text-brand-600 hover:underline font-medium" target="_blank">
+                Política de Privacidade (LGPD)
+              </Link>
+              . *
+            </span>
+          </label>
+          {errors.lgpdAccepted && (
+            <p className="text-xs text-rose-600">{errors.lgpdAccepted.message}</p>
+          )}
+
           {errors.root && (
             <p className="text-sm text-rose-600 bg-rose-50 rounded-xl px-3 py-2">
               {errors.root.message}
@@ -117,18 +142,6 @@ export default function RegisterPage() {
           <Button type="submit" fullWidth loading={isSubmitting} size="lg">
             Criar conta
           </Button>
-
-          <p className="text-xs text-gray-400 text-center">
-            Ao cadastrar, você concorda com nossos{' '}
-            <Link href="/terms" className="text-brand-600 hover:underline">
-              Termos de Uso
-            </Link>{' '}
-            e{' '}
-            <Link href="/privacy" className="text-brand-600 hover:underline">
-              Política de Privacidade
-            </Link>
-            .
-          </p>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-4">

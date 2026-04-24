@@ -20,6 +20,39 @@ import { PET_BEHAVIORS, PET_BEHAVIOR_LABEL } from '@/types'
 import { cleanPhone, phoneMask } from '@/lib/utils'
 import type { Pet } from '@/types'
 
+type PetStatusKey = 'none' | 'lost' | 'found' | 'returned' | 'for_adoption' | 'adopted' | 'petmatch'
+
+const STATUS_OPTIONS: { value: PetStatusKey; label: string }[] = [
+  { value: 'none',         label: '— Nenhum status especial' },
+  { value: 'lost',         label: '🚨 Esse pet está perdido' },
+  { value: 'found',        label: '📢 Esse pet foi encontrado (procura-se tutor)' },
+  { value: 'returned',     label: '🌟 Esse pet foi devolvido ao tutor' },
+  { value: 'for_adoption', label: '🏡 Esse pet está disponível para adoção responsável' },
+  { value: 'adopted',      label: '❤️ Esse pet teve a adoção realizada' },
+  { value: 'petmatch',     label: '💘 Esse pet está disponível no PetMatch' },
+]
+
+function derivePetStatus(p: Pet): PetStatusKey {
+  if (p.isReturned) return 'returned'
+  if (p.isAdopted) return 'adopted'
+  if (p.isLost) return 'lost'
+  if (p.isFound) return 'found'
+  if (p.isForAdoption) return 'for_adoption'
+  if (p.isForPetMatch) return 'petmatch'
+  return 'none'
+}
+
+function statusToBooleans(status: PetStatusKey) {
+  return {
+    isLost:        status === 'lost',
+    isFound:       status === 'found',
+    isReturned:    status === 'returned',
+    isForAdoption: status === 'for_adoption',
+    isAdopted:     status === 'adopted',
+    isForPetMatch: status === 'petmatch',
+  }
+}
+
 const schema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(50),
   species: z.enum(['DOG', 'CAT', 'OTHER']),
@@ -34,15 +67,15 @@ const schema = z.object({
   eyeColor: z.string().optional(),
   specificMarks: z.string().optional(),
   behavior: z.array(z.string()).optional(),
-  isUrgent: z.boolean().optional(),
-  isLost: z.boolean().optional(),
-  lastSeenLocation: z.string().optional(),
-  lostNotes: z.string().optional(),
   secretMark: z.string().optional(),
   profilePhotoUrl: z.string().url('URL inválida').optional().or(z.literal('')),
   ageEstimate: z.string().optional(),
-  // Adoção
-  isForAdoption: z.boolean().optional(),
+  // Status
+  petStatus: z.enum(['none', 'lost', 'found', 'returned', 'for_adoption', 'adopted', 'petmatch']),
+  isUrgentFoster: z.boolean().optional(),
+  // Detalhes de status
+  lastSeenLocation: z.string().optional(),
+  lostNotes: z.string().optional(),
   adoptionStory: z.string().optional(),
   adoptionReason: z.string().optional(),
   adoptionRequirements: z.string().optional(),
@@ -50,8 +83,6 @@ const schema = z.object({
   adoptionUrgency: z.string().optional(),
   isOng: z.boolean().optional(),
   ongName: z.string().optional(),
-  // PetMatch
-  isForPetMatch: z.boolean().optional(),
   petMatchObjective: z.string().optional(),
   petMatchPreferences: z.string().optional(),
   acceptsCrossbreeding: z.boolean().optional(),
@@ -96,6 +127,13 @@ export default function EditPetPage() {
   const currentSpecies = watch('species')
   const currentBreedId = watch('breedId')
   const currentBreed = watch('breed')
+  const currentStatus = watch('petStatus')
+  const isUrgentFoster = watch('isUrgentFoster')
+
+  const showUrgentFoster = currentStatus === 'found' || currentStatus === 'for_adoption'
+  const showLostFields = currentStatus === 'lost'
+  const showAdoptionFields = currentStatus === 'for_adoption' || currentStatus === 'adopted'
+  const showPetMatchFields = currentStatus === 'petmatch'
 
   useEffect(() => {
     if (!token || !params.id) return
@@ -117,15 +155,13 @@ export default function EditPetPage() {
           eyeColor: p.eyeColor ?? '',
           specificMarks: p.specificMarks ?? '',
           behavior: p.behavior ?? [],
-          isUrgent: p.isUrgent ?? false,
-          isLost: p.isLost ?? false,
-          lastSeenLocation: p.lastSeenLocation ?? '',
-          lostNotes: p.lostNotes ?? '',
           secretMark: p.secretMark ?? '',
           profilePhotoUrl: p.profilePhotoUrl ?? '',
           ageEstimate: p.ageEstimate ?? '',
-          // Adoção
-          isForAdoption: p.isForAdoption ?? false,
+          petStatus: derivePetStatus(p),
+          isUrgentFoster: p.isUrgentFoster ?? false,
+          lastSeenLocation: p.lastSeenLocation ?? '',
+          lostNotes: p.lostNotes ?? '',
           adoptionStory: p.adoptionStory ?? '',
           adoptionReason: p.adoptionReason ?? '',
           adoptionRequirements: p.adoptionRequirements ?? '',
@@ -133,13 +169,10 @@ export default function EditPetPage() {
           adoptionUrgency: p.adoptionUrgency ?? 'normal',
           isOng: p.isOng ?? false,
           ongName: p.ongName ?? '',
-          // PetMatch
-          isForPetMatch: p.isForPetMatch ?? false,
           petMatchObjective: p.petMatchObjective ?? '',
           petMatchPreferences: p.petMatchPreferences ?? '',
           acceptsCrossbreeding: p.acceptsCrossbreeding ?? false,
           petMatchObservations: p.petMatchObservations ?? '',
-          // Health
           vetName: p.health?.vetName ?? '',
           vetPhone: phoneMask(p.health?.vetPhone ?? ''),
           vetClinic: p.health?.vetClinic ?? '',
@@ -176,6 +209,8 @@ export default function EditPetPage() {
   async function onSubmit(data: FormData) {
     if (!token || !params.id) return
     try {
+      const booleans = statusToBooleans(data.petStatus)
+
       await petsApi.update(token, params.id, {
         name: data.name,
         species: data.species,
@@ -192,15 +227,16 @@ export default function EditPetPage() {
         eyeColor: data.eyeColor || undefined,
         specificMarks: data.specificMarks || undefined,
         behavior: data.behavior,
-        isUrgent: data.isUrgent,
-        isLost: data.isLost,
-        lastSeenLocation: data.lastSeenLocation || undefined,
-        lostNotes: data.lostNotes || undefined,
         secretMark: data.secretMark || undefined,
         profilePhotoUrl: data.profilePhotoUrl || undefined,
         ageEstimate: data.ageEstimate || undefined,
-        // Adoção
-        isForAdoption: data.isForAdoption,
+        // Status booleans derivados do petStatus selecionado
+        ...booleans,
+        // isUrgentFoster só válido em found ou for_adoption
+        isUrgentFoster: showUrgentFoster ? (data.isUrgentFoster ?? false) : false,
+        // Detalhes por status
+        lastSeenLocation: data.lastSeenLocation || undefined,
+        lostNotes: data.lostNotes || undefined,
         adoptionStory: data.adoptionStory || undefined,
         adoptionReason: data.adoptionReason || undefined,
         adoptionRequirements: data.adoptionRequirements || undefined,
@@ -208,8 +244,6 @@ export default function EditPetPage() {
         adoptionUrgency: data.adoptionUrgency || 'normal',
         isOng: data.isOng,
         ongName: data.ongName || undefined,
-        // PetMatch
-        isForPetMatch: data.isForPetMatch,
         petMatchObjective: data.petMatchObjective || undefined,
         petMatchPreferences: data.petMatchPreferences || undefined,
         acceptsCrossbreeding: data.acceptsCrossbreeding,
@@ -411,183 +445,157 @@ export default function EditPetPage() {
               </label>
             ))}
           </div>
-          <div className="mt-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                {...register('isUrgent')}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                ⚠️ Precisa de atenção urgente
-              </span>
-            </label>
-          </div>
         </Card>
 
-        {/* Modo perdido */}
+        {/* ── Status do pet ── */}
         <Card>
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="text-lg">🚨</span> Status de perda
+          <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <span className="text-lg">📋</span> Status do pet
           </h2>
-          <div className="space-y-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-rose-500 focus:ring-rose-500"
-                {...register('isLost')}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Marcar como perdido
-              </span>
-            </label>
-            <Input
-              label="Último local visto"
-              placeholder="Praça central do bairro..."
-              error={errors.lastSeenLocation?.message}
-              {...register('lastSeenLocation')}
-            />
-            <Textarea
-              label="Observações sobre o desaparecimento"
-              placeholder="Fugiu pelo portão, estava sem coleira..."
-              error={errors.lostNotes?.message}
-              {...register('lostNotes')}
-            />
-          </div>
-        </Card>
+          <p className="text-xs text-gray-500 mb-4">
+            Selecione o status atual do seu pet. Anúncios são criados automaticamente.
+          </p>
 
-        {/* Adoção responsável */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <span className="text-lg">🏡</span> Adoção responsável
-            </h2>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500"
-                {...register('isForAdoption')}
-              />
-              <span className="text-sm font-medium text-gray-700">Disponível para adoção</span>
-            </label>
+          <div className="space-y-2">
+            {STATUS_OPTIONS.map((opt) => (
+              <label key={opt.value} className="flex items-center gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                <input
+                  type="radio"
+                  value={opt.value}
+                  className="h-4 w-4 border-gray-300 text-brand-500 focus:ring-brand-500"
+                  {...register('petStatus')}
+                />
+                <span className="text-sm text-gray-800">{opt.label}</span>
+              </label>
+            ))}
           </div>
-          <div className="space-y-4">
-            <Textarea
-              label="História do pet"
-              placeholder="Conte a história do pet, personalidade, hábitos..."
-              error={errors.adoptionStory?.message}
-              {...register('adoptionStory')}
-            />
-            <Textarea
-              label="Motivo da adoção"
-              placeholder="Por que o pet está sendo disponibilizado..."
-              error={errors.adoptionReason?.message}
-              {...register('adoptionReason')}
-            />
-            <Textarea
-              label="Requisitos para o adotante"
-              placeholder="Ter espaço, não ter outros animais, etc..."
-              error={errors.adoptionRequirements?.message}
-              {...register('adoptionRequirements')}
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select
-                label="Nível de urgência"
-                {...register('adoptionUrgency')}
-              >
-                <option value="normal">Normal</option>
-                <option value="urgent">Urgente</option>
-              </Select>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
+
+          {/* Complemento de urgência — apenas em "encontrado" ou "adoção disponível" */}
+          {showUrgentFoster && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <label className="flex items-center gap-3 cursor-pointer p-2.5 rounded-xl bg-orange-50 border border-orange-100">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300"
-                  {...register('isInFosterHome')}
+                  className="h-4 w-4 rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+                  {...register('isUrgentFoster')}
                 />
-                <span className="text-sm text-gray-700">Está em lar temporário</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300"
-                  {...register('isOng')}
-                />
-                <span className="text-sm text-gray-700">Pertence a ONG</span>
+                <span className="text-sm font-medium text-orange-800">
+                  ⚠️ Urgente: em busca de lar temporário
+                </span>
               </label>
             </div>
-            <Input
-              label="Nome da ONG"
-              placeholder="Nome da organização"
-              error={errors.ongName?.message}
-              {...register('ongName')}
-            />
-            {pet?.isForAdoption && !pet?.isAdopted && (
-              <div className="pt-2 border-t border-gray-100">
-                {adoptedSuccess ? (
-                  <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 rounded-xl px-4 py-3">
-                    <CheckCircle2 size={16} />
-                    Adoção registrada! Redirecionando...
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleMarkAdopted}
-                    loading={adoptLoading}
-                  >
-                    ✅ Marcar como adotado
-                  </Button>
-                )}
+          )}
+
+          {/* Detalhes de "perdido" */}
+          {showLostFields && (
+            <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+              <Input
+                label="Último local visto"
+                placeholder="Praça central do bairro..."
+                error={errors.lastSeenLocation?.message}
+                {...register('lastSeenLocation')}
+              />
+              <Textarea
+                label="Observações sobre o desaparecimento"
+                placeholder="Fugiu pelo portão, estava sem coleira..."
+                error={errors.lostNotes?.message}
+                {...register('lostNotes')}
+              />
+            </div>
+          )}
+
+          {/* Detalhes de "adoção" */}
+          {showAdoptionFields && (
+            <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+              <Textarea
+                label="História do pet"
+                placeholder="Conte a história do pet, personalidade, hábitos..."
+                error={errors.adoptionStory?.message}
+                {...register('adoptionStory')}
+              />
+              <Textarea
+                label="Motivo da adoção"
+                placeholder="Por que o pet está sendo disponibilizado..."
+                error={errors.adoptionReason?.message}
+                {...register('adoptionReason')}
+              />
+              <Textarea
+                label="Requisitos para o adotante"
+                placeholder="Ter espaço, não ter outros animais, etc..."
+                error={errors.adoptionRequirements?.message}
+                {...register('adoptionRequirements')}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select label="Nível de urgência" {...register('adoptionUrgency')}>
+                  <option value="normal">Normal</option>
+                  <option value="urgent">Urgente</option>
+                </Select>
               </div>
-            )}
-          </div>
-        </Card>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" className="h-4 w-4 rounded border-gray-300" {...register('isInFosterHome')} />
+                  <span className="text-sm text-gray-700">Está em lar temporário</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" className="h-4 w-4 rounded border-gray-300" {...register('isOng')} />
+                  <span className="text-sm text-gray-700">Pertence a ONG</span>
+                </label>
+              </div>
+              <Input
+                label="Nome da ONG"
+                placeholder="Nome da organização"
+                error={errors.ongName?.message}
+                {...register('ongName')}
+              />
+              {pet?.isForAdoption && !pet?.isAdopted && (
+                <div className="pt-2 border-t border-gray-100">
+                  {adoptedSuccess ? (
+                    <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 rounded-xl px-4 py-3">
+                      <CheckCircle2 size={16} />
+                      Adoção registrada! Redirecionando...
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleMarkAdopted}
+                      loading={adoptLoading}
+                    >
+                      ✅ Marcar como adotado
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* PetMatch */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <span className="text-lg">💘</span> PetMatch
-            </h2>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
-                {...register('isForPetMatch')}
+          {/* Detalhes de "PetMatch" */}
+          {showPetMatchFields && (
+            <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+              <Textarea
+                label="Objetivo"
+                placeholder="O que você busca para o seu pet..."
+                error={errors.petMatchObjective?.message}
+                {...register('petMatchObjective')}
               />
-              <span className="text-sm font-medium text-gray-700">Disponível no PetMatch</span>
-            </label>
-          </div>
-          <div className="space-y-4">
-            <Textarea
-              label="Objetivo"
-              placeholder="O que você busca para o seu pet..."
-              error={errors.petMatchObjective?.message}
-              {...register('petMatchObjective')}
-            />
-            <Textarea
-              label="Preferências"
-              placeholder="Preferência de raça, porte, temperamento..."
-              error={errors.petMatchPreferences?.message}
-              {...register('petMatchPreferences')}
-            />
-            <Textarea
-              label="Observações"
-              placeholder="Informações relevantes para o PetMatch..."
-              error={errors.petMatchObservations?.message}
-              {...register('petMatchObservations')}
-            />
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300"
-                {...register('acceptsCrossbreeding')}
+              <Textarea
+                label="Preferências"
+                placeholder="Preferência de raça, porte, temperamento..."
+                error={errors.petMatchPreferences?.message}
+                {...register('petMatchPreferences')}
               />
-              <span className="text-sm text-gray-700">Aceita cruzamento</span>
-            </label>
-          </div>
+              <Textarea
+                label="Observações"
+                placeholder="Informações relevantes para o PetMatch..."
+                error={errors.petMatchObservations?.message}
+                {...register('petMatchObservations')}
+              />
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" className="h-4 w-4 rounded border-gray-300" {...register('acceptsCrossbreeding')} />
+                <span className="text-sm text-gray-700">Aceita cruzamento</span>
+              </label>
+            </div>
+          )}
         </Card>
 
         {/* Foto */}
@@ -603,7 +611,7 @@ export default function EditPetPage() {
                   alt="Preview do pet"
                   width={128}
                   height={128}
-                  className="h-32 w-32 rounded-full object-cover border-2 border-gray-200"
+                  className="h-32 w-32 rounded-xl object-cover border-2 border-gray-200"
                   unoptimized
                 />
               </div>
@@ -630,9 +638,6 @@ export default function EditPetPage() {
                 />
               </label>
               {photoError && <p className="text-xs text-rose-600">{photoError}</p>}
-              {errors.profilePhotoUrl && (
-                <p className="text-xs text-rose-600">{errors.profilePhotoUrl.message}</p>
-              )}
             </div>
             <input type="hidden" {...register('profilePhotoUrl')} />
           </div>
@@ -667,21 +672,13 @@ export default function EditPetPage() {
               error={errors.petShop?.message}
               {...register('petShop')}
             />
-            <Select
-              label="Vacinação"
-              error={errors.vaccinationStatus?.message}
-              {...register('vaccinationStatus')}
-            >
+            <Select label="Vacinação" error={errors.vaccinationStatus?.message} {...register('vaccinationStatus')}>
               <option value="">Não informado</option>
               <option value="up_to_date">Em dia</option>
               <option value="outdated">Atrasada</option>
               <option value="unknown">Desconhecido</option>
             </Select>
-            <Select
-              label="Vermifugação"
-              error={errors.dewormingStatus?.message}
-              {...register('dewormingStatus')}
-            >
+            <Select label="Vermifugação" error={errors.dewormingStatus?.message} {...register('dewormingStatus')}>
               <option value="">Não informado</option>
               <option value="up_to_date">Em dia</option>
               <option value="outdated">Atrasada</option>

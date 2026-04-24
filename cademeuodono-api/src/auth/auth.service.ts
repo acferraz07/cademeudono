@@ -54,6 +54,7 @@ export class AuthService {
         email: dto.email,
         fullName: dto.fullName,
         phonePrimary: dto.phonePrimary,
+        lgpdAcceptedAt: dto.lgpdAccepted ? new Date() : undefined,
       },
     })
 

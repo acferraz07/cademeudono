@@ -44,8 +44,36 @@ export interface User {
   complement?: string
   role: Role
   isActive: boolean
+  lgpdAcceptedAt?: string
   createdAt: string
   _count?: { pets: number; announcements: number }
+}
+
+export interface OrgProtector {
+  id: string
+  userId: string
+  type: 'ONG' | 'PROTETOR'
+  name: string
+  cnpj?: string
+  description?: string
+  phone?: string
+  email?: string
+  website?: string
+  instagram?: string
+  state: string
+  city: string
+  neighborhood?: string
+  address?: string
+  donationInfo?: string
+  pixKey?: string
+  logoUrl?: string
+  coverUrl?: string
+  actingSpecies: string[]
+  actingCities: string[]
+  isApproved: boolean
+  isActive: boolean
+  createdAt: string
+  user?: { id: string; fullName: string; avatarUrl?: string }
 }
 
 export interface ActivityLog {
@@ -82,6 +110,9 @@ export interface Pet {
   behavior?: string[]
   isUrgent?: boolean
   isLost?: boolean
+  isFound?: boolean
+  isReturned?: boolean
+  isUrgentFoster?: boolean
   lastSeenAt?: string
   lastSeenLocation?: string
   lostNotes?: string

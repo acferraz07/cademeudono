@@ -110,32 +110,34 @@ enum AdoptionStatus {
 
 model User {
   /// ID igual ao UID do Supabase Auth
-  id             String   @id @db.Uuid
-  email          String   @unique
-  fullName       String   @map("full_name")
-  phonePrimary   String?  @map("phone_primary")
-  phoneSecondary String?  @map("phone_secondary")
+  id             String    @id @db.Uuid
+  email          String    @unique
+  fullName       String    @map("full_name")
+  phonePrimary   String?   @map("phone_primary")
+  phoneSecondary String?   @map("phone_secondary")
   whatsapp       String?
-  avatarUrl      String?  @map("avatar_url")
+  avatarUrl      String?   @map("avatar_url")
   city           String?
   state          String?
   address        String?
   neighborhood   String?
   block          String?
-  lotNumber      String?  @map("lot_number")
-  streetNumber   String?  @map("street_number")
+  lotNumber      String?   @map("lot_number")
+  streetNumber   String?   @map("street_number")
   complement     String?
-  postalCode     String?  @map("postal_code")
-  role           Role     @default(USER)
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  postalCode     String?   @map("postal_code")
+  role           Role      @default(USER)
+  isActive       Boolean   @default(true) @map("is_active")
+  lgpdAcceptedAt DateTime? @map("lgpd_accepted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   pets             Pet[]
   announcements    Announcement[]
   fosterVolunteer  FosterVolunteer?
   adoptions        Adoption[]
   activities       ActivityLog[]
+  orgProtector     OrgProtector?
 
   @@map("users")
 }
@@ -159,6 +161,42 @@ model ActivityLog {
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("activity_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ONGs E PROTETORES
+// ─────────────────────────────────────────────────────────────
+
+model OrgProtector {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  type          String   // 'ONG' | 'PROTETOR'
+  name          String
+  cnpj          String?
+  description   String?
+  phone         String?
+  email         String?
+  website       String?
+  instagram     String?
+  state         String
+  city          String
+  neighborhood  String?
+  address       String?
+  donationInfo  String?  @map("donation_info")
+  pixKey        String?  @map("pix_key")
+  logoUrl       String?  @map("logo_url")
+  coverUrl      String?  @map("cover_url")
+  actingSpecies String[] @map("acting_species")
+  actingCities  String[] @map("acting_cities")
+  isApproved    Boolean  @default(false) @map("is_approved")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([state, city])
+  @@map("org_protectors")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -243,6 +281,9 @@ model Pet {
   behavior         String[]  @default([])
   isUrgent         Boolean   @default(false) @map("is_urgent")
   isLost           Boolean   @default(false) @map("is_lost")
+  isFound          Boolean   @default(false) @map("is_found")
+  isReturned       Boolean   @default(false) @map("is_returned")
+  isUrgentFoster   Boolean   @default(false) @map("is_urgent_foster")
   lastSeenAt       DateTime? @map("last_seen_at")
   lastSeenLocation String?   @map("last_seen_location")
   lostNotes        String?   @map("lost_notes")

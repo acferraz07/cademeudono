@@ -86,8 +86,11 @@ export class AnnouncementsService {
       }),
     ])
 
+    // Oculta endereço completo em listagens públicas (rua, complemento, lote)
+    const sanitized = items.map((a) => this.stripPrivateAddress(a))
+
     return {
-      items,
+      items: sanitized,
       meta: {
         total,
         page,
@@ -97,7 +100,7 @@ export class AnnouncementsService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requesterId?: string) {
     const announcement = await this.prisma.announcement.findUnique({
       where: { id },
       include: {
@@ -116,13 +119,18 @@ export class AnnouncementsService {
 
     if (!announcement) throw new NotFoundException('Anúncio não encontrado')
 
-    // Incrementa visualizações de forma não bloqueante
     void this.prisma.announcement.update({
       where: { id },
       data: { viewsCount: { increment: 1 } },
     })
 
-    return announcement
+    // Tutor logado vê endereço completo; demais veem apenas estado/cidade/bairro/quadra
+    const isOwner = requesterId && announcement.ownerId === requesterId
+    return isOwner ? announcement : this.stripPrivateAddress(announcement)
+  }
+
+  private stripPrivateAddress<T extends { street?: string | null; locationNotes?: string | null }>(item: T): T {
+    return { ...item, street: undefined, locationNotes: undefined }
   }
 
   async update(id: string, requesterId: string, dto: UpdateAnnouncementDto) {

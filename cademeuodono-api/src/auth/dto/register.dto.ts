@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
@@ -26,4 +27,9 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   phonePrimary?: string
+
+  @ApiPropertyOptional({ description: 'Aceite dos Termos de Uso e Política de Privacidade (LGPD)' })
+  @IsOptional()
+  @IsBoolean()
+  lgpdAccepted?: boolean
 }

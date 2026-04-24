@@ -23,6 +23,7 @@ interface AuthContextValue {
     email: string
     password: string
     phonePrimary?: string
+    lgpdAccepted?: boolean
   }) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>

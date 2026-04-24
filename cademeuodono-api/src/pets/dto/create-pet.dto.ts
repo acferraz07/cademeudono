@@ -130,6 +130,21 @@ export class CreatePetDto {
   @IsBoolean()
   isLost?: boolean
 
+  @ApiPropertyOptional({ default: false, description: 'Pet foi encontrado (procura-se tutor)' })
+  @IsOptional()
+  @IsBoolean()
+  isFound?: boolean
+
+  @ApiPropertyOptional({ default: false, description: 'Pet foi devolvido ao tutor' })
+  @IsOptional()
+  @IsBoolean()
+  isReturned?: boolean
+
+  @ApiPropertyOptional({ default: false, description: 'Urgente: em busca de lar temporário' })
+  @IsOptional()
+  @IsBoolean()
+  isUrgentFoster?: boolean
+
   @ApiPropertyOptional({ example: '2024-03-15T10:30:00Z' })
   @IsOptional()
   @IsDateString()

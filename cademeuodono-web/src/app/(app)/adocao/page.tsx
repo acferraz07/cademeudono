@@ -128,7 +128,7 @@ export default function AdocaoPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">🏡 Adoção responsável</h1>
+          <h1 className="text-2xl font-bold text-gray-900">🏡 Pets disponíveis para adoção</h1>
           <p className="text-sm text-gray-500 mt-1">Pets esperando por um lar cheio de amor</p>
         </div>
         <div className="flex gap-2">

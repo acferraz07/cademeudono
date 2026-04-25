@@ -110,7 +110,6 @@ export class PetsService {
             id: true,
             fullName: true,
             phonePrimary: true,
-            whatsapp: true,
             city: true,
             state: true,
           },
@@ -268,7 +267,7 @@ export class PetsService {
       include: {
         media: { where: { isPrimary: true }, take: 1 },
         breedRecord: { select: { name: true } },
-        owner: { select: { id: true, fullName: true, phonePrimary: true, whatsapp: true, city: true, state: true } },
+        owner: { select: { id: true, fullName: true, phonePrimary: true, city: true, state: true } },
       },
       orderBy: [{ adoptionUrgency: 'desc' }, { createdAt: 'desc' }],
     })
@@ -292,7 +291,7 @@ export class PetsService {
       include: {
         media: { where: { isPrimary: true }, take: 1 },
         breedRecord: { select: { name: true } },
-        owner: { select: { id: true, fullName: true, phonePrimary: true, whatsapp: true, city: true, state: true } },
+        owner: { select: { id: true, fullName: true, phonePrimary: true, city: true, state: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -336,7 +335,7 @@ export class PetsService {
       include: {
         media: { where: { isPrimary: true }, take: 1 },
         breedRecord: { select: { name: true } },
-        owner: { select: { id: true, fullName: true, phonePrimary: true, whatsapp: true, city: true, state: true } },
+        owner: { select: { id: true, fullName: true, phonePrimary: true, city: true, state: true } },
       },
     })
 
@@ -445,11 +444,11 @@ export class PetsService {
   private async upsertAnnouncement(petId: string, ownerId: string, type: AnnouncementType) {
     const pet = await this.prisma.pet.findUnique({
       where: { id: petId },
-      include: { owner: { select: { state: true, city: true, neighborhood: true, block: true, phonePrimary: true, whatsapp: true, fullName: true } } },
+      include: { owner: { select: { state: true, city: true, neighborhood: true, block: true, phonePrimary: true, fullName: true } } },
     })
     if (!pet) return
 
-    const contact = pet.owner.whatsapp ?? pet.owner.phonePrimary ?? ''
+    const contact = pet.owner.phonePrimary ?? ''
     const breedLabel = pet.breedName ?? pet.breed ?? undefined
 
     // Verifica se já existe anúncio ativo deste tipo para este pet

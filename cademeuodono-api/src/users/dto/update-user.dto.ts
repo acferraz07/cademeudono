@@ -68,12 +68,4 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string
-
-  @ApiPropertyOptional({
-    example: '63999990000',
-    description: 'Número WhatsApp — apenas dígitos, sem +55. Ex: 63999990000',
-  })
-  @IsOptional()
-  @IsString()
-  whatsapp?: string
 }

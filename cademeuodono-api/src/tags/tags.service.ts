@@ -26,7 +26,7 @@ export class TagsService {
         pet: {
           include: {
             owner: {
-              select: { fullName: true, phonePrimary: true, whatsapp: true },
+              select: { fullName: true, phonePrimary: true },
             },
             media: { where: { isPrimary: true }, take: 1 },
             breedRecord: { select: { name: true } },
@@ -50,8 +50,7 @@ export class TagsService {
           text:
             'Cada Smart Tag possui um código único e tecnologia NFC de aproximação. ' +
             'Ao aproximar o celular da tag ou escanear o QR Code, a pessoa acessa instantaneamente ' +
-            'a ficha pública do pet, com informações essenciais e um botão para entrar em contato ' +
-            'com o tutor via WhatsApp — sem precisar instalar nenhum aplicativo.',
+            'a ficha pública do pet, com informações essenciais e um botão para entrar em contato com o tutor.',
         },
       }
     }
@@ -77,7 +76,7 @@ export class TagsService {
         pet: {
           include: {
             owner: {
-              select: { fullName: true, phonePrimary: true, whatsapp: true },
+              select: { fullName: true, phonePrimary: true },
             },
             media: { where: { isPrimary: true }, take: 1 },
             breedRecord: { select: { name: true } },
@@ -113,16 +112,14 @@ export class TagsService {
       specificMarks: string | null
       profilePhotoUrl: string | null
       media: { url: string }[]
-      owner: { fullName: string; phonePrimary: string | null; whatsapp: string | null }
+      owner: { fullName: string; phonePrimary: string | null }
     },
   ) {
     const ownerFirstName = pet.owner.fullName.split(' ')[0]
-    // Preferir WhatsApp; fallback para phonePrimary
-    const rawContact = pet.owner.whatsapp ?? pet.owner.phonePrimary ?? ''
-    const whatsappNumber = rawContact.replace(/\D/g, '')
+    const phoneNumber = (pet.owner.phonePrimary ?? '').replace(/\D/g, '')
     const breedDisplay = pet.breedRecord?.name ?? pet.breedName ?? pet.breed ?? null
 
-    const whatsappBaseUrl = this.buildWhatsappUrl(whatsappNumber, pet.name, code)
+    const contactUrl = this.buildContactUrl(phoneNumber, pet.name, code)
 
     return {
       code,
@@ -130,7 +127,7 @@ export class TagsService {
       // Dados para o frontend construir URL com localização
       petName: pet.name,
       tagCode: code,
-      whatsappNumber,
+      phoneNumber,
       pet: {
         name: pet.name,
         species: pet.species,
@@ -145,9 +142,9 @@ export class TagsService {
         firstName: ownerFirstName,
       },
       contact: {
-        whatsappNumber,
+        phoneNumber,
         // URL de fallback sem localização — o frontend pode construir uma URL com localização
-        whatsappUrl: whatsappBaseUrl,
+        contactUrl,
       },
     }
   }
@@ -249,11 +246,7 @@ export class TagsService {
     })
   }
 
-  /**
-   * Constrói URL do WhatsApp sem localização (fallback).
-   * O frontend deve construir a URL com localização quando disponível.
-   */
-  private buildWhatsappUrl(number: string, petName: string, tagCode: string): string {
+  private buildContactUrl(number: string, petName: string, tagCode: string): string {
     const message = encodeURIComponent(
       `Olá! Encontrei o pet ${petName} através da Smart Tag Cadê Meu Dono.\n\n` +
         `A tag escaneada foi: ${tagCode}\n\n` +

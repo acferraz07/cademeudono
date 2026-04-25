@@ -115,7 +115,6 @@ model User {
   fullName       String    @map("full_name")
   phonePrimary   String?   @map("phone_primary")
   phoneSecondary String?   @map("phone_secondary")
-  whatsapp       String?
   avatarUrl      String?   @map("avatar_url")
   city           String?
   state          String?
@@ -535,23 +534,6 @@ model Adoption {
   @@index([userId])
   @@index([petId])
   @@map("adoptions")
-}
-
-// ─────────────────────────────────────────────────────────────
-// OTP PARA LOGIN POR TELEFONE / WHATSAPP
-// ─────────────────────────────────────────────────────────────
-
-model OtpVerification {
-  id        String   @id @default(uuid()) @db.Uuid
-  phone     String
-  codeHash  String   @map("code_hash")
-  expiresAt DateTime @map("expires_at")
-  attempts  Int      @default(0)
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([phone, expiresAt])
-  @@map("otp_verifications")
 }
 
 // ─────────────────────────────────────────────────────────────

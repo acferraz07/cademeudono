@@ -7,8 +7,4 @@ export default () => ({
     anonKey: process.env.SUPABASE_ANON_KEY ?? '',
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
   },
-  zapi: {
-    instanceId: process.env.ZAPI_INSTANCE_ID ?? '',
-    token: process.env.ZAPI_TOKEN ?? '',
-  },
 })

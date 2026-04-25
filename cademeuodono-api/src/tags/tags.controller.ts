@@ -41,7 +41,7 @@ export class PetPublicController {
       'Não requer autenticação. Registra log de scan automaticamente.',
   })
   @ApiParam({ name: 'code', example: 'CMD-ST-00001' })
-  @ApiResponse({ status: 200, description: 'Dados públicos do pet e link de contato WhatsApp' })
+  @ApiResponse({ status: 200, description: 'Dados públicos do pet e link de contato' })
   @ApiResponse({ status: 404, description: 'Tag não encontrada' })
   getPublicProfile(@Param('code') code: string, @Req() req: Request) {
     return this.tagsService.getPublicProfile(code, req)

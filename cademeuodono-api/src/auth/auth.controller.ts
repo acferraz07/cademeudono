@@ -14,8 +14,6 @@ import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { ForgotPasswordDto } from './dto/forgot-password.dto'
-import { PhoneSendOtpDto } from './dto/phone-send-otp.dto'
-import { WhatsappVerifyOtpDto } from './dto/whatsapp-verify-otp.dto'
 
 @ApiTags('Autenticação')
 @Controller('auth')
@@ -62,29 +60,5 @@ export class AuthController {
   @ApiOperation({ summary: 'Solicitar recuperação de senha' })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email)
-  }
-
-  // ─── LOGIN POR WHATSAPP (OTP via Z-API) ──────────────────────────────────────
-
-  @Public()
-  @Post('whatsapp/send-otp')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Enviar OTP via WhatsApp (Z-API)',
-    description: 'Gera código OTP e envia via WhatsApp usando Z-API. Requer ZAPI_INSTANCE_ID e ZAPI_TOKEN configurados.',
-  })
-  whatsappSendOtp(@Body() dto: PhoneSendOtpDto) {
-    return this.authService.whatsappSendOtp(dto.phone)
-  }
-
-  @Public()
-  @Post('whatsapp/verify-otp')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verificar código OTP do WhatsApp e autenticar' })
-  @ApiResponse({ status: 200, description: 'Autenticado com sucesso' })
-  @ApiResponse({ status: 401, description: 'Código inválido ou expirado' })
-  @ApiResponse({ status: 429, description: 'Muitas tentativas' })
-  whatsappVerifyOtp(@Body() dto: WhatsappVerifyOtpDto) {
-    return this.authService.whatsappVerifyOtp(dto)
   }
 }

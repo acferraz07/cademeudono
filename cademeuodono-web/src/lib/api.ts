@@ -87,18 +87,6 @@ export const authApi = {
       body: JSON.stringify({ email }),
     }),
 
-  phoneSendOtp: (phone: string) =>
-    request(`${API_URL}/auth/phone/send-otp`, {
-      method: 'POST',
-      body: JSON.stringify({ phone }),
-    }),
-
-  phoneVerifyOtp: (phone: string, code: string) =>
-    request<{ user: User; session: { access_token: string; refresh_token: string } }>(
-      `${API_URL}/auth/phone/verify-otp`,
-      { method: 'POST', body: JSON.stringify({ phone, code }) },
-    ),
-
   whatsappSendOtp: (phone: string) =>
     request(`${API_URL}/auth/whatsapp/send-otp`, {
       method: 'POST',

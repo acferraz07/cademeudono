@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 
-type LoginMode = 'email' | 'phone' | 'whatsapp'
+type LoginMode = 'email' | 'whatsapp'
 
 const emailSchema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -98,7 +98,7 @@ function EmailLoginForm() {
   )
 }
 
-function PhoneOtpForm({ mode }: { mode: 'phone' | 'whatsapp' }) {
+function WhatsappOtpForm() {
   const { loginWithToken } = useAuth()
   const [step, setStep] = useState<'phone' | 'otp'>('phone')
   const [pendingPhone, setPendingPhone] = useState('')
@@ -108,25 +108,16 @@ function PhoneOtpForm({ mode }: { mode: 'phone' | 'whatsapp' }) {
   const phoneForm = useForm<PhoneFormData>({ resolver: zodResolver(phoneSchema) })
   const otpForm = useForm<OtpFormData>({ resolver: zodResolver(otpSchema) })
 
-  const label = mode === 'whatsapp' ? 'WhatsApp' : 'Telefone'
-  const hint = mode === 'whatsapp'
-    ? 'Você receberá um código de 6 dígitos pelo WhatsApp'
-    : 'Você receberá um código de 6 dígitos por SMS'
-
   async function onSendOtp(data: PhoneFormData) {
     setGlobalError('')
     const phone = normalizePhone(data.phone)
     try {
-      if (mode === 'phone') {
-        await authApi.phoneSendOtp(phone)
-      } else {
-        await authApi.whatsappSendOtp(phone)
-      }
+      await authApi.whatsappSendOtp(phone)
       setPendingPhone(phone)
       setSuccessMsg(`Código enviado para ${data.phone}`)
       setStep('otp')
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : `Erro ao enviar código via ${label}`
+      const msg = err instanceof ApiError ? err.message : 'Erro ao enviar código via WhatsApp'
       setGlobalError(msg)
     }
   }
@@ -134,12 +125,7 @@ function PhoneOtpForm({ mode }: { mode: 'phone' | 'whatsapp' }) {
   async function onVerifyOtp(data: OtpFormData) {
     setGlobalError('')
     try {
-      let result
-      if (mode === 'phone') {
-        result = await authApi.phoneVerifyOtp(pendingPhone, data.code)
-      } else {
-        result = await authApi.whatsappVerifyOtp(pendingPhone, data.code)
-      }
+      const result = await authApi.whatsappVerifyOtp(pendingPhone, data.code)
       if (result?.session) {
         await loginWithToken(result.session.access_token, result.session.refresh_token)
       }
@@ -153,8 +139,8 @@ function PhoneOtpForm({ mode }: { mode: 'phone' | 'whatsapp' }) {
     return (
       <form onSubmit={phoneForm.handleSubmit(onSendOtp)} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4">
         <PhoneInput
-          label={label}
-          hint={hint}
+          label="WhatsApp"
+          hint="Você receberá um código de 6 dígitos pelo WhatsApp"
           required
           error={phoneForm.formState.errors.phone?.message}
           {...phoneForm.register('phone')}
@@ -222,19 +208,13 @@ function LoginContent() {
       <div className="flex rounded-xl border border-gray-200 bg-gray-50 p-1 mb-4 gap-1">
         <button
           onClick={() => setMode('email')}
-          className={`flex-1 text-xs font-medium py-2 rounded-lg transition-colors ${mode === 'email' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${mode === 'email' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
         >
           E-mail
         </button>
         <button
-          onClick={() => setMode('phone')}
-          className={`flex-1 text-xs font-medium py-2 rounded-lg transition-colors ${mode === 'phone' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          Telefone (SMS)
-        </button>
-        <button
           onClick={() => setMode('whatsapp')}
-          className={`flex-1 text-xs font-medium py-2 rounded-lg transition-colors ${mode === 'whatsapp' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${mode === 'whatsapp' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
         >
           WhatsApp
         </button>
@@ -242,8 +222,7 @@ function LoginContent() {
 
       <Suspense fallback={null}>
         {mode === 'email' && <EmailLoginForm />}
-        {mode === 'phone' && <PhoneOtpForm mode="phone" />}
-        {mode === 'whatsapp' && <PhoneOtpForm mode="whatsapp" />}
+        {mode === 'whatsapp' && <WhatsappOtpForm />}
       </Suspense>
 
       <p className="text-center text-sm text-gray-500 mt-4">

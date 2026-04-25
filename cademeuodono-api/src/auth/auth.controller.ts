@@ -15,7 +15,6 @@ import { LoginDto } from './dto/login.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { ForgotPasswordDto } from './dto/forgot-password.dto'
 import { PhoneSendOtpDto } from './dto/phone-send-otp.dto'
-import { PhoneVerifyOtpDto } from './dto/phone-verify-otp.dto'
 import { WhatsappVerifyOtpDto } from './dto/whatsapp-verify-otp.dto'
 
 @ApiTags('Autenticação')
@@ -65,38 +64,14 @@ export class AuthController {
     return this.authService.forgotPassword(dto.email)
   }
 
-  // ─── LOGIN POR TELEFONE (SMS via Supabase) ───────────────────────────────────
-
-  @Public()
-  @Post('phone/send-otp')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Enviar OTP por SMS (Supabase Phone Auth)',
-    description: 'Requer Twilio ou outro provedor SMS configurado no Supabase.',
-  })
-  phoneSendOtp(@Body() dto: PhoneSendOtpDto) {
-    return this.authService.phoneSendOtp(dto)
-  }
-
-  @Public()
-  @Post('phone/verify-otp')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verificar código OTP de SMS e autenticar' })
-  @ApiResponse({ status: 200, description: 'Autenticado com sucesso' })
-  @ApiResponse({ status: 401, description: 'Código inválido ou expirado' })
-  phoneVerifyOtp(@Body() dto: PhoneVerifyOtpDto) {
-    return this.authService.phoneVerifyOtp(dto)
-  }
-
-  // ─── LOGIN POR WHATSAPP (OTP customizado) ────────────────────────────────────
+  // ─── LOGIN POR WHATSAPP (OTP via Z-API) ──────────────────────────────────────
 
   @Public()
   @Post('whatsapp/send-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Enviar OTP via WhatsApp',
-    description:
-      'Gera código OTP e envia via WhatsApp. Requer provedor externo (Twilio, Z-API, WATI, Evolution API) configurado.',
+    summary: 'Enviar OTP via WhatsApp (Z-API)',
+    description: 'Gera código OTP e envia via WhatsApp usando Z-API. Requer ZAPI_INSTANCE_ID e ZAPI_TOKEN configurados.',
   })
   whatsappSendOtp(@Body() dto: PhoneSendOtpDto) {
     return this.authService.whatsappSendOtp(dto.phone)

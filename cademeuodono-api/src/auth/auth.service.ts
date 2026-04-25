@@ -128,19 +128,41 @@ export class AuthService {
   // ─── LOGIN POR WHATSAPP (OTP via Z-API) ──────────────────────────────────────
 
   async whatsappSendOtp(whatsapp: string) {
-    const existingUser = await this.prisma.user.findFirst({
-      where: { whatsapp },
-    })
-
-    if (!existingUser) {
-      throw new BadRequestException('Número não encontrado. Cadastre-se primeiro.')
-    }
-
     const zapiInstanceId = this.config.get<string>('zapi.instanceId')
     const zapiToken = this.config.get<string>('zapi.token')
 
     if (!zapiInstanceId || !zapiToken) {
       throw new BadRequestException('Login por WhatsApp ainda não configurado')
+    }
+
+    let user = await this.prisma.user.findFirst({ where: { whatsapp } })
+    let wasCreated = false
+
+    if (!user) {
+      const digits = whatsapp.replace(/\D/g, '')
+      const placeholderEmail = `wa_${digits}@placeholder.cademeuodono.app`
+
+      const { data: authData, error: authError } = await this.supabase.admin.createUser({
+        email: placeholderEmail,
+        email_confirm: true,
+        user_metadata: { full_name: 'Usuário', whatsapp },
+      })
+
+      if (authError || !authData.user) {
+        throw new InternalServerErrorException('Falha ao criar usuário automaticamente')
+      }
+
+      user = await this.prisma.user.create({
+        data: {
+          id: authData.user.id,
+          email: placeholderEmail,
+          fullName: 'Usuário',
+          whatsapp,
+          isActive: true,
+        },
+      })
+
+      wasCreated = true
     }
 
     await this.prisma.otpVerification.updateMany({
@@ -174,9 +196,12 @@ export class AuthService {
     }
 
     return {
-      message: 'Código enviado via WhatsApp.',
+      message: wasCreated
+        ? 'Conta criada automaticamente. Complete seu perfil depois.'
+        : 'Código enviado via WhatsApp.',
       whatsapp,
       expiresInMinutes: OTP_EXPIRY_MINUTES,
+      accountCreated: wasCreated,
     }
   }
 

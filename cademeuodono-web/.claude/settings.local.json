@@ -3,7 +3,12 @@
     "allow": [
       "Bash(xargs ls *)",
       "Bash(npx --prefix D:/claudecode/ARQUIVO_1/cademeuodono-api tsc --noEmit)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(npm list *)",
+      "Bash(magick --version)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp ok'\\)\")",
+      "Bash(node scripts/generate-icons.mjs)"
     ]
   }
 }

@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { Input, Select } from '@/components/ui/input'
 import { BRAZIL_STATES } from '@/lib/utils'
+import { PALMAS_LOCATIONS, PALMAS_REGIONS } from '@/data/palmas-locations'
 
+// Kept for external backward compatibility
 export const PALMAS_NEIGHBORHOODS = [
   'Plano Diretor Sul',
   'Plano Diretor Norte',
@@ -73,6 +75,8 @@ interface LocationSelectorProps {
   requiredCity?: boolean
 }
 
+const OTHER_BLOCK = '__outro__'
+
 export function LocationSelector({
   value,
   onChange,
@@ -87,6 +91,7 @@ export function LocationSelector({
 }: LocationSelectorProps) {
   const [cities, setCities] = useState<string[]>([])
   const [loadingCities, setLoadingCities] = useState(false)
+  const [blockFreeText, setBlockFreeText] = useState(false)
 
   useEffect(() => {
     if (!value.state) {
@@ -99,22 +104,65 @@ export function LocationSelector({
       .finally(() => setLoadingCities(false))
   }, [value.state])
 
+  // Reset free-text mode when region changes
+  useEffect(() => {
+    setBlockFreeText(false)
+  }, [value.neighborhood])
+
   const isPalmas =
-    value.state === 'TO' &&
-    value.city?.trim().toLowerCase() === 'palmas'
+    value.state === 'TO' && value.city?.trim().toLowerCase() === 'palmas'
+
+  const isRural = isPalmas && value.neighborhood === 'Rural'
+
+  const palmasBlocks: string[] =
+    isPalmas && value.neighborhood && value.neighborhood in PALMAS_LOCATIONS
+      ? PALMAS_LOCATIONS[value.neighborhood]
+      : []
+
+  // If the stored block is not in the current region's list, show free-text input
+  const blockNotInList =
+    !!value.block && palmasBlocks.length > 0 && !palmasBlocks.includes(value.block)
+  const showBlockFreeText = blockFreeText || blockNotInList
+
+  // Show Palmas block selector when a non-Rural region is selected
+  const showPalmasBlock = isPalmas && !!value.neighborhood && !isRural
+
+  function handleStateChange(newState: string) {
+    onChange('state', newState)
+    onChange('city', '')
+    onChange('neighborhood', '')
+    onChange('block', '')
+  }
+
+  function handleCityChange(newCity: string) {
+    onChange('city', newCity)
+    onChange('neighborhood', '')
+    onChange('block', '')
+  }
+
+  function handleNeighborhoodChange(newNeighborhood: string) {
+    onChange('neighborhood', newNeighborhood)
+    onChange('block', '')
+  }
+
+  function handleBlockSelectChange(selected: string) {
+    if (selected === OTHER_BLOCK) {
+      setBlockFreeText(true)
+      onChange('block', '')
+    } else {
+      onChange('block', selected)
+    }
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Estado */}
       <Select
         label="Estado"
         required={requiredState}
         error={errors?.state}
         value={value.state ?? ''}
-        onChange={(e) => {
-          onChange('state', e.target.value)
-          onChange('city', '')
-          onChange('neighborhood', '')
-        }}
+        onChange={(e) => handleStateChange(e.target.value)}
       >
         <option value="">Selecione</option>
         {BRAZIL_STATES.map((s) => (
@@ -124,16 +172,14 @@ export function LocationSelector({
         ))}
       </Select>
 
+      {/* Cidade */}
       {value.state && cities.length > 0 ? (
         <Select
           label="Cidade"
           required={requiredCity}
           error={errors?.city}
           value={value.city ?? ''}
-          onChange={(e) => {
-            onChange('city', e.target.value)
-            onChange('neighborhood', '')
-          }}
+          onChange={(e) => handleCityChange(e.target.value)}
           disabled={loadingCities}
         >
           <option value="">{loadingCities ? 'Carregando...' : 'Selecione a cidade'}</option>
@@ -150,25 +196,23 @@ export function LocationSelector({
           required={requiredCity}
           error={errors?.city}
           value={value.city ?? ''}
-          onChange={(e) => {
-            onChange('city', e.target.value)
-            onChange('neighborhood', '')
-          }}
+          onChange={(e) => handleCityChange(e.target.value)}
           hint={loadingCities ? 'Carregando cidades...' : undefined}
         />
       )}
 
+      {/* Bairro / Região */}
       {isPalmas ? (
         <Select
-          label="Bairro / Região"
+          label="Região"
           error={errors?.neighborhood}
           value={value.neighborhood ?? ''}
-          onChange={(e) => onChange('neighborhood', e.target.value)}
+          onChange={(e) => handleNeighborhoodChange(e.target.value)}
         >
-          <option value="">Selecione o bairro</option>
-          {PALMAS_NEIGHBORHOODS.map((n) => (
-            <option key={n} value={n}>
-              {n}
+          <option value="">Selecione a região</option>
+          {PALMAS_REGIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
             </option>
           ))}
         </Select>
@@ -182,57 +226,127 @@ export function LocationSelector({
         />
       )}
 
-      {showBlock && (
+      {/* Quadra — Palmas: sempre exibido quando uma região está selecionada */}
+      {showPalmasBlock &&
+        (showBlockFreeText ? (
+          // Modo texto livre (após selecionar "Outro" ou bloco não encontrado na lista)
+          <div className="flex flex-col gap-1">
+            <Input
+              label="Quadra / Localidade"
+              placeholder="Digite a quadra ou localidade"
+              error={errors?.block}
+              value={value.block ?? ''}
+              onChange={(e) => onChange('block', e.target.value)}
+            />
+            <button
+              type="button"
+              className="text-xs text-brand-600 hover:underline self-start"
+              onClick={() => {
+                setBlockFreeText(false)
+                onChange('block', '')
+              }}
+            >
+              ← Selecionar da lista
+            </button>
+          </div>
+        ) : (
+          // Dropdown filtrado pela região
+          <Select
+            label="Quadra"
+            error={errors?.block}
+            value={value.block ?? ''}
+            onChange={(e) => handleBlockSelectChange(e.target.value)}
+          >
+            <option value="">Selecione a quadra</option>
+            {palmasBlocks.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+            <option value={OTHER_BLOCK}>Outro / Não encontrei</option>
+          </Select>
+        ))}
+
+      {/* Quadra — outras cidades */}
+      {!isPalmas && showBlock && (
         <Input
           label="Quadra"
-          placeholder={isPalmas ? 'Quadra 304 Sul' : 'Quadra ou bloco'}
-          hint="Digite ou selecione. Ex: Quadra 304 Sul"
+          placeholder="Quadra ou bloco"
+          hint="Ex: Quadra 304 Sul"
           error={errors?.block}
           value={value.block ?? ''}
           onChange={(e) => onChange('block', e.target.value)}
         />
       )}
 
-      {showLotNumber && (
-        <Input
-          label="Lote"
-          placeholder="10"
-          hint="Número do lote (alfanumérico)"
-          error={errors?.lotNumber}
-          value={value.lotNumber ?? ''}
-          onChange={(e) => onChange('lotNumber', e.target.value)}
-        />
-      )}
-
-      {showStreet && (
-        <Input
-          label="Rua / Alameda"
-          placeholder={isPalmas ? 'Alameda 5' : 'Nome da rua'}
-          error={errors?.street}
-          value={value.street ?? ''}
-          onChange={(e) => onChange('street', e.target.value)}
-        />
-      )}
-
-      {showStreetNumber && (
-        <Input
-          label="Número"
-          placeholder="12A"
-          hint="Aceita letras e números. Ex: 12, 12A, S/N"
-          error={errors?.streetNumber}
-          value={value.streetNumber ?? ''}
-          onChange={(e) => onChange('streetNumber', e.target.value)}
-        />
-      )}
-
-      {showComplement && (
-        <Input
-          label="Complemento"
-          placeholder="Casa, Apto 302, Fundo, Bloco B"
-          error={errors?.complement}
-          value={value.complement ?? ''}
-          onChange={(e) => onChange('complement', e.target.value)}
-        />
+      {/* Campos especiais para Região Rural */}
+      {isRural ? (
+        <>
+          <Input
+            label="Estrada / rodovia / acesso"
+            placeholder="Ex: TO-050, Estrada do Lajeado"
+            error={errors?.street}
+            value={value.street ?? ''}
+            onChange={(e) => onChange('street', e.target.value)}
+          />
+          <Input
+            label="Nome da propriedade / fazenda"
+            placeholder="Ex: Fazenda Boa Vista, Chácara São João"
+            error={errors?.block}
+            value={value.block ?? ''}
+            onChange={(e) => onChange('block', e.target.value)}
+          />
+          <div className="sm:col-span-2">
+            <Input
+              label="Referência e observações"
+              placeholder="Ex: KM 15, após o posto, porteira azul"
+              error={errors?.complement}
+              value={value.complement ?? ''}
+              onChange={(e) => onChange('complement', e.target.value)}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {showLotNumber && (
+            <Input
+              label="Lote"
+              placeholder="10"
+              hint="Número do lote (alfanumérico)"
+              error={errors?.lotNumber}
+              value={value.lotNumber ?? ''}
+              onChange={(e) => onChange('lotNumber', e.target.value)}
+            />
+          )}
+          {showStreet && (
+            <Input
+              label="Rua / Alameda"
+              placeholder={isPalmas ? 'Alameda 5' : 'Nome da rua'}
+              error={errors?.street}
+              value={value.street ?? ''}
+              onChange={(e) => onChange('street', e.target.value)}
+            />
+          )}
+          {showStreetNumber && (
+            <Input
+              label="Número"
+              placeholder="12A"
+              hint="Aceita letras e números. Ex: 12, 12A, S/N"
+              error={errors?.streetNumber}
+              value={value.streetNumber ?? ''}
+              onChange={(e) => onChange('streetNumber', e.target.value)}
+            />
+          )}
+          {showComplement && (
+            <Input
+              label="Complemento"
+              placeholder="Casa, Apto 302, Fundo, Bloco B"
+              error={errors?.complement}
+              value={value.complement ?? ''}
+              onChange={(e) => onChange('complement', e.target.value)}
+            />
+          )}
+        </>
       )}
     </div>
   )

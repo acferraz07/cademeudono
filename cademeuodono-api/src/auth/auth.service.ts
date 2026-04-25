@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -20,6 +21,8 @@ const OTP_MAX_ATTEMPTS = 3
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly supabase: SupabaseService,
@@ -178,20 +181,21 @@ export class AuthService {
       data: { phone: whatsapp, codeHash, expiresAt },
     })
 
-    // Z-API espera número sem o prefixo +
-    const zapiPhone = whatsapp.replace('+', '')
+    const phoneFormatted = '55' + whatsapp.replace(/\D/g, '')
     const zapiUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`
 
     const response = await fetch(zapiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        phone: zapiPhone,
+        phone: phoneFormatted,
         message: `Seu código de acesso ao Cadê Meu Dono é: ${code}. Ele expira em 5 minutos.`,
       }),
     })
 
     if (!response.ok) {
+      const errorBody = await response.json().catch(() => null)
+      this.logger.error(`Z-API send-text falhou — status: ${response.status}`, errorBody)
       throw new BadRequestException('Falha ao enviar mensagem via WhatsApp. Tente novamente.')
     }
 

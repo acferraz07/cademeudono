@@ -183,7 +183,19 @@ export class AuthService {
     })
 
     const phoneFormatted = '55' + whatsapp.replace(/\D/g, '')
+
+    // TODO: remover logs temporários após confirmar vars no Render
+    console.log('ZAPI_INSTANCE_ID_CHECK:', process.env.ZAPI_INSTANCE_ID)
+    console.log(
+      'ZAPI_TOKEN_CHECK:',
+      process.env.ZAPI_TOKEN?.slice(0, 6) + '...' + process.env.ZAPI_TOKEN?.slice(-4),
+    )
+
     const zapiUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`
+    console.log(
+      'ZAPI_URL_CHECK:',
+      `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/[TOKEN]/send-text`,
+    )
 
     try {
       await axios.post(

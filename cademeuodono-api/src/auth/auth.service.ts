@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as bcrypt from 'bcryptjs'
+import axios from 'axios'
 import { PrismaService } from '../prisma/prisma.service'
 import { SupabaseService } from '../supabase/supabase.service'
 import { RegisterDto } from './dto/register.dto'
@@ -184,18 +185,17 @@ export class AuthService {
     const phoneFormatted = '55' + whatsapp.replace(/\D/g, '')
     const zapiUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`
 
-    const response = await fetch(zapiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phone: phoneFormatted,
-        message: `Seu código de acesso ao Cadê Meu Dono é: ${code}. Ele expira em 5 minutos.`,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => null)
-      this.logger.error(`Z-API send-text falhou — status: ${response.status}`, errorBody)
+    try {
+      await axios.post(
+        zapiUrl,
+        {
+          phone: phoneFormatted,
+          message: `Seu código de acesso ao Cadê Meu Dono é: ${code}. Ele expira em 5 minutos.`,
+        },
+        { headers: { 'Content-Type': 'application/json' } },
+      )
+    } catch (error) {
+      this.logger.error('ZAPI ERROR:', error.response?.data ?? error.message)
       throw new BadRequestException('Falha ao enviar mensagem via WhatsApp. Tente novamente.')
     }
 

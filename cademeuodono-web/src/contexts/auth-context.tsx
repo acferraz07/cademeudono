@@ -16,8 +16,8 @@ interface AuthContextValue {
   user: User | null
   token: string | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  loginWithToken: (accessToken: string, refreshToken: string) => Promise<void>
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>
+  loginWithToken: (accessToken: string, refreshToken: string, redirectTo?: string) => Promise<void>
   register: (data: {
     fullName: string
     email: string
@@ -57,20 +57,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false))
   }, [])
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, redirectTo?: string) => {
     const { user: u, session } = await authApi.login({ email, password })
     setStoredToken(session.access_token, session.refresh_token)
     setToken(session.access_token)
     setUser(u)
-    router.push('/dashboard')
+    router.push(redirectTo ?? '/dashboard')
   }, [router])
 
-  const loginWithToken = useCallback(async (accessToken: string, refreshToken: string) => {
+  const loginWithToken = useCallback(async (accessToken: string, refreshToken: string, redirectTo?: string) => {
     setStoredToken(accessToken, refreshToken)
     setToken(accessToken)
     const u = await usersApi.getMe(accessToken)
     setUser(u)
-    router.push('/dashboard')
+    router.push(redirectTo ?? '/dashboard')
   }, [router])
 
   const register = useCallback(async (data: Parameters<AuthContextValue['register']>[0]) => {

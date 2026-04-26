@@ -22,6 +22,7 @@ function EmailLoginForm() {
   const { login } = useAuth()
   const params = useSearchParams()
   const registered = params.get('registered')
+  const redirect = params.get('redirect') ?? undefined
 
   const {
     register,
@@ -32,7 +33,7 @@ function EmailLoginForm() {
 
   async function onSubmit(data: EmailFormData) {
     try {
-      await login(data.email, data.password)
+      await login(data.email, data.password, redirect)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Erro ao entrar. Tente novamente.'
       setError('root', { message: msg })

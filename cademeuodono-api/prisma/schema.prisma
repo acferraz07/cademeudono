@@ -425,7 +425,7 @@ model AnnouncementImage {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SMART TAGS (legado — mantido para compatibilidade)
+// SMART TAGS
 // ─────────────────────────────────────────────────────────────
 
 model SmartTag {
@@ -433,8 +433,8 @@ model SmartTag {
   code        String    @unique
   status      TagStatus @default(AVAILABLE)
   petId       String?   @map("pet_id") @db.Uuid
-  ownerId     String?   @map("owner_id") @db.Uuid
-  batchNumber String?   @map("batch_number")
+  ownerId     String?   @map("tutor_id") @db.Uuid
+  batchNumber String?   @map("lote")
   activatedAt DateTime? @map("activated_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -443,7 +443,7 @@ model SmartTag {
   scanLogs TagScanLog[]
 
   @@index([petId])
-  @@map("smart_tags")
+  @@map("smart_tags_new")
 }
 
 model TagScanLog {

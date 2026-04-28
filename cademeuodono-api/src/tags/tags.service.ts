@@ -161,7 +161,7 @@ export class TagsService {
     return {
       code: tag.code,
       status: tag.status,
-      canActivate: tag.status === TagStatus.SOLD && !tag.petId,
+      canActivate: tag.status === TagStatus.AVAILABLE && !tag.petId,
     }
   }
 
@@ -177,7 +177,7 @@ export class TagsService {
       throw new BadRequestException('Esta tag já está ativa')
     }
 
-    if (tag.status !== TagStatus.SOLD) {
+    if (tag.status !== TagStatus.AVAILABLE) {
       throw new BadRequestException(
         'Esta tag não está disponível para ativação. Verifique se o código está correto.',
       )

@@ -10,7 +10,8 @@
       "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp ok'\\)\")",
       "Bash(node scripts/generate-icons.mjs)",
       "Bash(ls -la \"D:\\\\\\\\claudecode\\\\\\\\ARQUIVO_1\\\\\\\\cademeuodono-web\")",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(npx next *)"
     ]
   }
 }

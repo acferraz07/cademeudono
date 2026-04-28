@@ -6,7 +6,8 @@
       "Bash(npx prisma *)",
       "Bash(npx next *)",
       "Bash(npx nest *)",
-      "Bash(node -e \"require\\('axios'\\); console.log\\('axios ok'\\)\")"
+      "Bash(node -e \"require\\('axios'\\); console.log\\('axios ok'\\)\")",
+      "Bash(node *)"
     ]
   }
 }

@@ -66,6 +66,7 @@ export const authApi = {
     email: string
     password: string
     phonePrimary?: string
+    lgpdAccepted?: boolean
   }) =>
     request<{ user: User; session: { access_token: string; refresh_token: string } | null }>(
       `${API_URL}/auth/register`,

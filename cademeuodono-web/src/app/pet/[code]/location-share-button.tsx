@@ -26,9 +26,9 @@ export function LocationShareButton({ petName, tagCode, whatsappNumber }: Props)
         const { latitude, longitude } = position.coords
         const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`
         const message =
-          `Olá! Tudo bem?! ⚠️ Sua Smart Tag Cadê Meu Dono do pet ${petName} foi escaneada. ` +
-          `Encontrei o(a) ${petName}! Ele(a) está comigo e em segurança. ` +
-          `Minha localização aproximada: ${mapsLink} ` +
+          `Olá! Tudo bem?! ⚠️ Sua Smart Tag Cadê Meu Dono do pet ${petName} foi escaneada.\n` +
+          `Encontrei o(a) ${petName}! Ele(a) está comigo e em segurança.\n` +
+          `Minha localização aproximada: ${mapsLink}\n` +
           `Podemos combinar a melhor forma para devolvê-lo(a)? 🐾`
         openWhatsApp(message)
         setLoading(false)
@@ -53,8 +53,8 @@ export function LocationShareButton({ petName, tagCode, whatsappNumber }: Props)
   function openWhatsAppWithoutLocation() {
     const name = petName || 'seu pet'
     const message =
-      `Olá! Tudo bem?! ⚠️ Sua Smart Tag Cadê Meu Dono do pet ${name} foi escaneada. ` +
-      `Encontrei o(a) ${name}! Ele(a) está comigo e em segurança. ` +
+      `Olá! Tudo bem?! ⚠️ Sua Smart Tag Cadê Meu Dono do pet ${name} foi escaneada.\n` +
+      `Encontrei o(a) ${name}! Ele(a) está comigo e em segurança.\n` +
       `Podemos combinar a melhor forma para devolvê-lo(a)? 🐾`
     openWhatsApp(message)
   }

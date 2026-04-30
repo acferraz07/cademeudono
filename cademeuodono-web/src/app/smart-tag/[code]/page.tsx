@@ -254,10 +254,10 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
             </div>
           )}
 
-          {contact?.whatsappUrl && (
+          {contact?.whatsappNumber && (
             <div className="mt-6 w-full max-w-sm space-y-3">
               <a
-                href={contact.whatsappUrl}
+                href={buildWhatsAppUrl(contact.whatsappNumber, pet!.name)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-3 w-full bg-[#25D366] hover:bg-[#20bc5a] text-white font-semibold rounded-2xl py-4 px-6 text-base transition-colors shadow-lg shadow-green-200 active:scale-95"
@@ -438,6 +438,18 @@ function CharRow({ label, value }: { label: string; value: string }) {
       <dd className="text-sm text-gray-700 font-medium">{value}</dd>
     </div>
   )
+}
+
+function buildWhatsAppUrl(rawNumber: string, petName: string): string {
+  const name = petName || 'seu pet'
+  const message =
+    'Olá! Tudo bem?!\n\n' +
+    `⚠️ *Sua Smart Tag Cadê Meu Dono do pet ${name} foi escaneada!*\n\n` +
+    `Encontrei o(a) ${name}! Ele(a) está comigo e em segurança.\n\n` +
+    'Podemos combinar a melhor forma para devolvê-lo(a)? 🐾'
+  const digits = rawNumber.replace(/\D/g, '')
+  const number = digits.startsWith('55') ? digits : `55${digits}`
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`
 }
 
 function formatPhone(raw: string): string {

@@ -6,10 +6,10 @@ import Link from 'next/link'
 import { PawPrint, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
-import { petsApi } from '@/lib/api'
+import { petsApi, tagsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import type { Pet } from '@/types'
+import type { Pet, TagPublicData } from '@/types'
 
 interface SmartTagRow {
   code: string
@@ -21,26 +21,6 @@ interface SmartTagRow {
   sub_lote: string | null
 }
 
-interface PetPublicData {
-  id: string
-  name: string
-  species: string
-  breed: string | null
-  // ajuste o nome da coluna conforme o schema real do Supabase
-  profile_photo_url: string | null
-  coat_color: string[] | null
-  eye_color: string | null
-  specific_marks: string | null
-}
-
-interface TutorData {
-  id: string
-  full_name: string
-  // ajuste o nome da tabela/coluna conforme o schema real (ex: 'users' ou 'profiles')
-  whatsapp: string | null
-  phone_primary: string | null
-}
-
 type PageState =
   | { type: 'loading' }
   | { type: 'not_found' }
@@ -48,7 +28,7 @@ type PageState =
   | { type: 'select_pet'; pets: Pet[] }
   | { type: 'activating' }
   | { type: 'success' }
-  | { type: 'active'; pet: PetPublicData; tutor: TutorData | null }
+  | { type: 'active'; data: TagPublicData }
   | { type: 'error'; message: string }
 
 export default function SmartTagPage({ params }: { params: { code: string } }) {
@@ -74,7 +54,7 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
       const tag = data as SmartTagRow
 
       if (tag.status === 'ACTIVE') {
-        await fetchActiveData(tag.pet_id, tag.tutor_id)
+        await fetchActiveData()
       } else if (tag.status === 'AVAILABLE') {
         setState({ type: 'available' })
       } else {
@@ -85,37 +65,17 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
     fetchTag()
   }, [code])
 
-  async function fetchActiveData(petId: string | null, tutorId: string | null) {
-    if (!petId) {
-      setState({ type: 'error', message: 'Pet não associado a esta tag' })
-      return
-    }
-
-    const [petResult, tutorResult] = await Promise.all([
-      supabase
-        .from('pets')
-        .select('id, name, species, breed, profile_photo_url, coat_color, eye_color, specific_marks')
-        .eq('id', petId)
-        .single(),
-      tutorId
-        ? supabase
-            .from('profiles') // troque por 'users' se necessário
-            .select('id, full_name, whatsapp, phone_primary')
-            .eq('id', tutorId)
-            .single()
-        : Promise.resolve({ data: null, error: null }),
-    ])
-
-    if (petResult.error || !petResult.data) {
+  async function fetchActiveData() {
+    try {
+      const data = await tagsApi.getPublic(code)
+      if (!data.isActive || !data.pet) {
+        setState({ type: 'error', message: data.message ?? 'Não foi possível carregar as informações do pet' })
+        return
+      }
+      setState({ type: 'active', data })
+    } catch {
       setState({ type: 'error', message: 'Não foi possível carregar as informações do pet' })
-      return
     }
-
-    setState({
-      type: 'active',
-      pet: petResult.data as PetPublicData,
-      tutor: tutorResult.data as TutorData | null,
-    })
   }
 
   async function handleActivateClick() {
@@ -225,10 +185,9 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
   }
 
   if (state.type === 'active') {
-    const { pet, tutor } = state
-    const whatsapp = tutor?.whatsapp ?? tutor?.phone_primary
-    const whatsappUrl = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : null
-    const coatColors = Array.isArray(pet.coat_color) ? pet.coat_color : []
+    const { pet, owner, contact } = state.data
+    const speciesLabel = pet!.species === 'DOG' ? 'Cão' : pet!.species === 'CAT' ? 'Gato' : 'Pet'
+    const coatColors = Array.isArray(pet!.coatColor) ? pet!.coatColor : []
 
     return (
       <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white flex flex-col">
@@ -236,10 +195,10 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
 
         <main className="flex-1 flex flex-col items-center px-4 pb-10">
           <div className="relative w-40 h-40 sm:w-52 sm:h-52 rounded-full overflow-hidden shadow-xl border-4 border-white mt-2 mb-6 bg-brand-100">
-            {pet.profile_photo_url ? (
+            {pet!.photo ? (
               <Image
-                src={pet.profile_photo_url}
-                alt={pet.name}
+                src={pet!.photo}
+                alt={pet!.name}
                 fill
                 className="object-cover"
                 priority
@@ -247,16 +206,16 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-6xl sm:text-7xl">
-                  {pet.species === 'DOG' ? '🐕' : pet.species === 'CAT' ? '🐈' : '🐾'}
+                  {pet!.species === 'DOG' ? '🐕' : pet!.species === 'CAT' ? '🐈' : '🐾'}
                 </span>
               </div>
             )}
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center">{pet.name}</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center">{pet!.name}</h1>
           <p className="text-gray-500 mt-1 text-base">
-            {pet.species === 'DOG' ? 'Cão' : pet.species === 'CAT' ? 'Gato' : 'Pet'}
-            {pet.breed ? ` · ${pet.breed}` : ''}
+            {speciesLabel}
+            {pet!.breed ? ` · ${pet!.breed}` : ''}
           </p>
 
           <div className="mt-6 w-full max-w-sm bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
@@ -269,39 +228,45 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
             </div>
           </div>
 
-          {(coatColors.length > 0 || pet.eye_color || pet.specific_marks) && (
+          {(coatColors.length > 0 || pet!.eyeColor || pet!.specificMarks) && (
             <div className="mt-5 w-full max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="font-semibold text-gray-900 text-sm mb-3">Características</h2>
               <dl className="space-y-2">
                 {coatColors.length > 0 && (
                   <CharRow label="Pelagem" value={coatColors.join(', ')} />
                 )}
-                {pet.eye_color && <CharRow label="Olhos" value={pet.eye_color} />}
-                {pet.specific_marks && <CharRow label="Marcas" value={pet.specific_marks} />}
+                {pet!.eyeColor && <CharRow label="Olhos" value={pet!.eyeColor} />}
+                {pet!.specificMarks && <CharRow label="Marcas" value={pet!.specificMarks} />}
               </dl>
             </div>
           )}
 
-          {whatsappUrl && (
+          {owner?.fullName && (
+            <div className="mt-5 w-full max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <h2 className="font-semibold text-gray-900 text-sm mb-3">Tutor</h2>
+              <dl className="space-y-2">
+                <CharRow label="Nome" value={owner.fullName} />
+                {owner.address && <CharRow label="Local" value={owner.address} />}
+                {contact?.whatsappNumber && (
+                  <CharRow label="Telefone" value={formatPhone(contact.whatsappNumber)} />
+                )}
+              </dl>
+            </div>
+          )}
+
+          {contact?.whatsappUrl && (
             <div className="mt-6 w-full max-w-sm space-y-3">
               <a
-                href={whatsappUrl}
+                href={contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-3 w-full bg-[#25D366] hover:bg-[#20bc5a] text-white font-semibold rounded-2xl py-4 px-6 text-base transition-colors shadow-lg shadow-green-200 active:scale-95"
               >
                 <WhatsAppIcon />
-                Falar com o tutor
+                Entrar em contato pelo WhatsApp
               </a>
               <p className="text-xs text-center text-gray-400">Você será redirecionado para o WhatsApp</p>
             </div>
-          )}
-
-          {tutor?.full_name && (
-            <p className="mt-4 text-sm text-gray-400">
-              Tutor:{' '}
-              <span className="font-medium text-gray-600">{tutor.full_name.split(' ')[0]}</span>
-            </p>
           )}
         </main>
 
@@ -473,6 +438,13 @@ function CharRow({ label, value }: { label: string; value: string }) {
       <dd className="text-sm text-gray-700 font-medium">{value}</dd>
     </div>
   )
+}
+
+function formatPhone(raw: string): string {
+  const digits = raw.startsWith('55') ? raw.slice(2) : raw
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return raw
 }
 
 function WhatsAppIcon() {

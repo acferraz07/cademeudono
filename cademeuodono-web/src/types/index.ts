@@ -218,10 +218,14 @@ export interface TagPublicData {
     isLost?: boolean
     isUrgent?: boolean
   }
-  owner?: { firstName: string }
+  owner?: {
+    firstName: string
+    fullName: string
+    address?: string | null
+  }
   contact?: {
     whatsappNumber: string
-    whatsappUrl: string
+    whatsappUrl: string | null
   }
 }
 

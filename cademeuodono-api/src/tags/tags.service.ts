@@ -26,7 +26,14 @@ export class TagsService {
         pet: {
           include: {
             owner: {
-              select: { fullName: true, phonePrimary: true },
+              select: {
+                fullName: true,
+                phonePrimary: true,
+                address: true,
+                neighborhood: true,
+                city: true,
+                state: true,
+              },
             },
             media: { where: { isPrimary: true }, take: 1 },
             breedRecord: { select: { name: true } },
@@ -76,7 +83,14 @@ export class TagsService {
         pet: {
           include: {
             owner: {
-              select: { fullName: true, phonePrimary: true },
+              select: {
+                fullName: true,
+                phonePrimary: true,
+                address: true,
+                neighborhood: true,
+                city: true,
+                state: true,
+              },
             },
             media: { where: { isPrimary: true }, take: 1 },
             breedRecord: { select: { name: true } },
@@ -112,22 +126,38 @@ export class TagsService {
       specificMarks: string | null
       profilePhotoUrl: string | null
       media: { url: string }[]
-      owner: { fullName: string; phonePrimary: string | null }
+      owner: {
+        fullName: string
+        phonePrimary: string | null
+        address: string | null
+        neighborhood: string | null
+        city: string | null
+        state: string | null
+      }
     },
   ) {
-    const ownerFirstName = pet.owner.fullName.split(' ')[0]
-    const phoneNumber = (pet.owner.phonePrimary ?? '').replace(/\D/g, '')
     const breedDisplay = pet.breedRecord?.name ?? pet.breedName ?? pet.breed ?? null
+    const phoneDigits = (pet.owner.phonePrimary ?? '').replace(/\D/g, '')
+    const whatsappNumber = phoneDigits ? `55${phoneDigits}` : ''
 
-    const contactUrl = this.buildContactUrl(phoneNumber, pet.name, code)
+    const addressParts = [pet.owner.neighborhood, pet.owner.city, pet.owner.state].filter(Boolean)
+    const address = addressParts.length > 0 ? addressParts.join(', ') : null
+
+    const petName = pet.name || 'seu pet'
+    const whatsappMessage =
+      `Olá! Tudo bem?! ⚠️ Sua Smart Tag Cadê Meu Dono do pet ${petName} foi escaneada. ` +
+      `Encontrei o(a) ${petName}! Ele(a) está comigo e em segurança. ` +
+      `Podemos combinar a melhor forma para devolvê-lo(a)? 🐾`
+
+    const whatsappUrl = whatsappNumber
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
+      : null
 
     return {
       code,
       isActive: true,
-      // Dados para o frontend construir URL com localização
       petName: pet.name,
       tagCode: code,
-      phoneNumber,
       pet: {
         name: pet.name,
         species: pet.species,
@@ -139,13 +169,13 @@ export class TagsService {
         photo: pet.media[0]?.url ?? pet.profilePhotoUrl ?? null,
       },
       owner: {
-        firstName: ownerFirstName,
+        firstName: pet.owner.fullName.split(' ')[0],
+        fullName: pet.owner.fullName,
+        address,
       },
-      contact: {
-        phoneNumber,
-        // URL de fallback sem localização — o frontend pode construir uma URL com localização
-        contactUrl,
-      },
+      contact: whatsappNumber
+        ? { whatsappNumber, whatsappUrl }
+        : undefined,
     }
   }
 
@@ -246,12 +276,4 @@ export class TagsService {
     })
   }
 
-  private buildContactUrl(number: string, petName: string, tagCode: string): string {
-    const message = encodeURIComponent(
-      `Olá! Encontrei o pet ${petName} através da Smart Tag Cadê Meu Dono.\n\n` +
-        `A tag escaneada foi: ${tagCode}\n\n` +
-        `Podemos combinar a melhor forma para devolvê-lo? 🐾`,
-    )
-    return `https://wa.me/55${number}?text=${message}`
-  }
 }

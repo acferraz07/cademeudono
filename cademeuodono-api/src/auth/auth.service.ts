@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -29,30 +30,46 @@ export class AuthService {
     })
 
     if (error) {
-      if (error.message.toLowerCase().includes('already registered')) {
+      const msg = error.message ?? ''
+      const lower = msg.toLowerCase()
+
+      if (lower.includes('fetch failed') || lower.includes('failed to fetch') || lower.includes('networkerror')) {
+        throw new ServiceUnavailableException(
+          'Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.',
+        )
+      }
+      if (lower.includes('already registered') || lower.includes('user already registered')) {
         throw new ConflictException('Este e-mail já está cadastrado')
       }
-      throw new BadRequestException(error.message)
+      throw new BadRequestException(msg || 'Erro ao criar conta')
     }
 
     if (!data.user) {
       throw new InternalServerErrorException('Falha ao criar usuário no provedor de autenticação')
     }
 
-    const user = await this.prisma.user.create({
-      data: {
-        id: data.user.id,
-        email: dto.email,
-        fullName: dto.fullName,
-        phonePrimary: dto.phonePrimary,
-        lgpdAcceptedAt: dto.lgpdAccepted ? new Date() : undefined,
-      },
-    })
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          id: data.user.id,
+          email: dto.email,
+          fullName: dto.fullName,
+          phonePrimary: dto.phonePrimary ?? null,
+          lgpdAcceptedAt: dto.lgpdAccepted ? new Date() : null,
+        },
+      })
 
-    return {
-      user,
-      session: data.session,
-      message: 'Cadastro realizado com sucesso. Verifique seu e-mail para ativar a conta.',
+      return {
+        user,
+        session: data.session,
+        message: 'Cadastro realizado com sucesso. Verifique seu e-mail para ativar a conta.',
+      }
+    } catch (dbError: unknown) {
+      const prismaError = dbError as { code?: string }
+      if (prismaError?.code === 'P2002') {
+        throw new ConflictException('Este e-mail já está cadastrado')
+      }
+      throw new InternalServerErrorException('Erro ao salvar usuário. Tente novamente.')
     }
   }
 

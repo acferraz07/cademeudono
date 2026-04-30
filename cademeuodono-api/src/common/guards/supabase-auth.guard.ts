@@ -43,11 +43,30 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Token inválido ou expirado')
     }
 
-    const dbUser = await this.prisma.user.findUnique({
+    let dbUser = await this.prisma.user.findUnique({
       where: { id: supabaseUser.id },
     })
 
-    if (!dbUser || !dbUser.isActive) {
+    if (!dbUser) {
+      // Auto-provision users from OAuth providers (Google, Apple, etc.) on first login.
+      // Email/password users must register explicitly via POST /auth/register.
+      const provider = supabaseUser.app_metadata?.provider as string | undefined
+      if (!provider || provider === 'email') {
+        throw new UnauthorizedException('Usuário não encontrado ou inativo')
+      }
+      const meta = (supabaseUser.user_metadata ?? {}) as Record<string, string>
+      dbUser = await this.prisma.user.create({
+        data: {
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          fullName: meta.full_name ?? meta.name ?? supabaseUser.email!.split('@')[0],
+          avatarUrl: meta.avatar_url ?? null,
+          lgpdAcceptedAt: new Date(),
+        },
+      })
+    }
+
+    if (!dbUser.isActive) {
       throw new UnauthorizedException('Usuário não encontrado ou inativo')
     }
 

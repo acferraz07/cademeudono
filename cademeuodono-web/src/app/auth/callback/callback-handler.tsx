@@ -1,53 +1,54 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 
 export function CallbackHandler() {
-  const router = useRouter()
   const { loginWithToken } = useAuth()
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function handleCallback() {
-      const code = searchParams.get('code')
-      const errorParam = searchParams.get('error')
-      const errorDescription = searchParams.get('error_description')
+    const errorParam = searchParams.get('error')
+    const errorDescription = searchParams.get('error_description')
 
-      if (errorParam) {
-        setError(errorDescription ?? 'Autenticação cancelada ou recusada.')
+    if (errorParam) {
+      setError(errorDescription ?? 'Autenticação cancelada ou recusada.')
+      return
+    }
+
+    async function handleCallback() {
+      // The Supabase SDK automatically exchanges the PKCE code from the URL during
+      // initialization (_getSessionFromURL). Calling exchangeCodeForSession manually
+      // would fail with AuthPKCECodeVerifierMissingError because the verifier is already
+      // consumed. getSession() awaits initializePromise so it returns the session only
+      // after the SDK has finished processing the code.
+      const { data, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[auth/callback] session error:', sessionError)
+        setError('Não foi possível finalizar o login com Google. Tente novamente.')
         return
       }
 
-      let session
-      if (code) {
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError || !data.session) {
-          setError('Não foi possível finalizar o login com Google. Tente novamente.')
-          return
-        }
-        session = data.session
-      } else {
-        const { data, error: sessionError } = await supabase.auth.getSession()
-        if (sessionError || !data.session) {
-          setError('Sessão não encontrada. Tente fazer login novamente.')
-          return
-        }
-        session = data.session
+      if (!data.session) {
+        console.error('[auth/callback] no session after OAuth exchange')
+        setError('Sessão não encontrada. Tente fazer login novamente.')
+        return
       }
 
       try {
-        await loginWithToken(session.access_token, session.refresh_token ?? '')
-      } catch {
+        await loginWithToken(data.session.access_token, data.session.refresh_token ?? '')
+      } catch (err) {
+        console.error('[auth/callback] loginWithToken error:', err)
         setError('Não foi possível autenticar com o servidor. Tente novamente.')
       }
     }
 
     handleCallback()
-  }, [router, loginWithToken, searchParams])
+  }, [loginWithToken, searchParams])
 
   if (error) {
     return (

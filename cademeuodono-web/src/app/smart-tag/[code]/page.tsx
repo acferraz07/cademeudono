@@ -414,9 +414,12 @@ export default function SmartTagPage({ params }: { params: { code: string } }) {
 function PageHeader() {
   return (
     <header className="flex items-center justify-center gap-2 py-4 px-4">
-      <div className="w-6 h-6 rounded-lg bg-brand-500 flex items-center justify-center">
-        <PawPrint size={12} className="text-white" />
-      </div>
+      <Image
+        src="/logo-smarttag.png"
+        alt="Cadê Meu Dono"
+        width={28}
+        height={28}
+      />
       <span className="text-sm font-semibold text-gray-600">Cadê Meu Dono</span>
     </header>
   )
